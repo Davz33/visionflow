@@ -1,0 +1,153 @@
+name: Deploy to Google Cloud Platform
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main ]
+
+env:
+  PROJECT_ID: visionflow-gcp-project
+  GKE_CLUSTER: visionflow-cluster
+  GKE_ZONE: us-central1-a
+  DEPLOYMENT_NAME: visionflow
+  IMAGE_API: visionflow-api
+  IMAGE_ORCHESTRATOR: visionflow-orchestrator
+  IMAGE_GENERATION: visionflow-generation
+
+jobs:
+  setup-build-publish-deploy:
+    name: Setup, Build, Publish, and Deploy
+    runs-on: ubuntu-latest
+    environment: production
+
+    permissions:
+      contents: read
+      id-token: write
+
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v4
+
+    - name: Setup Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.11'
+
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt
+        pip install -e .[dev,monitoring]
+
+    - name: Run tests
+      run: |
+        pytest tests/ -v --cov=visionflow --cov-report=xml
+
+    - name: Run linting
+      run: |
+        black --check visionflow/
+        isort --check-only visionflow/
+        ruff check visionflow/
+
+    - name: Authenticate to Google Cloud
+      id: auth
+      uses: google-github-actions/auth@v1
+      with:
+        credentials_json: ${{ secrets.GCP_SA_KEY }}
+
+    - name: Setup Cloud SDK
+      uses: google-github-actions/setup-gcloud@v1
+
+    - name: Configure Docker to use gcloud as a credential helper
+      run: |-
+        gcloud --quiet auth configure-docker
+
+    - name: Get GKE credentials
+      run: |-
+        gcloud container clusters get-credentials "$GKE_CLUSTER" --zone "$GKE_ZONE"
+
+    - name: Build API Docker image
+      run: |-
+        docker build \
+          --tag "gcr.io/$PROJECT_ID/$IMAGE_API:$GITHUB_SHA" \
+          --tag "gcr.io/$PROJECT_ID/$IMAGE_API:latest" \
+          --file docker/Dockerfile.api \
+          .
+
+    - name: Build Orchestrator Docker image
+      run: |-
+        docker build \
+          --tag "gcr.io/$PROJECT_ID/$IMAGE_ORCHESTRATOR:$GITHUB_SHA" \
+          --tag "gcr.io/$PROJECT_ID/$IMAGE_ORCHESTRATOR:latest" \
+          --file docker/Dockerfile.orchestrator \
+          .
+
+    - name: Build Generation Docker image
+      run: |-
+        docker build \
+          --tag "gcr.io/$PROJECT_ID/$IMAGE_GENERATION:$GITHUB_SHA" \
+          --tag "gcr.io/$PROJECT_ID/$IMAGE_GENERATION:latest" \
+          --file docker/Dockerfile.generation \
+          .
+
+    - name: Publish Docker images
+      run: |-
+        docker push "gcr.io/$PROJECT_ID/$IMAGE_API:$GITHUB_SHA"
+        docker push "gcr.io/$PROJECT_ID/$IMAGE_API:latest"
+        docker push "gcr.io/$PROJECT_ID/$IMAGE_ORCHESTRATOR:$GITHUB_SHA"
+        docker push "gcr.io/$PROJECT_ID/$IMAGE_ORCHESTRATOR:latest"
+        docker push "gcr.io/$PROJECT_ID/$IMAGE_GENERATION:$GITHUB_SHA"
+        docker push "gcr.io/$PROJECT_ID/$IMAGE_GENERATION:latest"
+
+    - name: Setup Kustomize
+      run: |-
+        curl -sfLo kustomize https://github.com/kubernetes-sigs/kustomize/releases/download/v3.1.0/kustomize_3.1.0_linux_amd64
+        chmod u+x ./kustomize
+
+    - name: Deploy to GKE
+      run: |-
+        # Apply Kubernetes manifests
+        kubectl apply -f k8s/namespace.yaml
+        kubectl apply -f k8s/configmap.yaml
+        kubectl apply -f k8s/secrets.yaml
+        kubectl apply -f k8s/rbac.yaml
+        kubectl apply -f k8s/postgres-deployment.yaml
+        kubectl apply -f k8s/redis-deployment.yaml
+        kubectl apply -f k8s/api-deployment.yaml
+        kubectl apply -f k8s/orchestration-deployment.yaml
+        kubectl apply -f k8s/gpu-worker-deployment.yaml
+        kubectl apply -f k8s/ingress.yaml
+        kubectl apply -f k8s/monitoring.yaml
+        
+        # Update image tags
+        kubectl set image deployment/visionflow-api api="gcr.io/$PROJECT_ID/$IMAGE_API:$GITHUB_SHA" -n visionflow
+        kubectl set image deployment/visionflow-orchestrator orchestrator="gcr.io/$PROJECT_ID/$IMAGE_ORCHESTRATOR:$GITHUB_SHA" -n visionflow
+        kubectl set image deployment/visionflow-gpu-worker gpu-worker="gcr.io/$PROJECT_ID/$IMAGE_GENERATION:$GITHUB_SHA" -n visionflow
+        
+        # Wait for rollout
+        kubectl rollout status deployment/visionflow-api -n visionflow
+        kubectl rollout status deployment/visionflow-orchestrator -n visionflow
+        kubectl rollout status deployment/visionflow-gpu-worker -n visionflow
+        
+        # Get external IP
+        kubectl get services -n visionflow
+
+    - name: Run health checks
+      run: |-
+        # Wait for services to be ready
+        sleep 60
+        
+        # Check API health
+        API_IP=$(kubectl get service visionflow-api-service -n visionflow -o jsonpath='{.status.loadBalancer.ingress[0].ip}')
+        curl -f "http://$API_IP/health" || exit 1
+        
+        # Check orchestrator health
+        ORCH_IP=$(kubectl get service visionflow-orchestrator-service -n visionflow -o jsonpath='{.status.loadBalancer.ingress[0].ip}')
+        curl -f "http://$ORCH_IP/health" || exit 1
+
+    - name: Notify deployment
+      if: always()
+      run: |-
+        echo "Deployment completed for commit $GITHUB_SHA"
+        echo "Environment: ${{ github.ref == 'refs/heads/main' && 'production' || 'staging' }}"

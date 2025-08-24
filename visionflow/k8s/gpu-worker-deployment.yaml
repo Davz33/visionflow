@@ -1,0 +1,137 @@
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: visionflow-gpu-worker
+  namespace: visionflow
+  labels:
+    app: visionflow-gpu-worker
+    version: v1
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: visionflow-gpu-worker
+  template:
+    metadata:
+      labels:
+        app: visionflow-gpu-worker
+        version: v1
+    spec:
+      serviceAccountName: visionflow-sa
+      nodeSelector:
+        cloud.google.com/gke-accelerator: nvidia-tesla-t4
+      containers:
+      - name: gpu-worker
+        image: gcr.io/visionflow-gcp-project/visionflow-generation:latest
+        ports:
+        - containerPort: 8002
+          name: http
+        env:
+        # Model configuration
+        - name: WAN_MODEL_PATH
+          valueFrom:
+            configMapKeyRef:
+              name: visionflow-config
+              key: WAN_MODEL_PATH
+        - name: MODEL_CACHE_DIR
+          valueFrom:
+            configMapKeyRef:
+              name: visionflow-config
+              key: MODEL_CACHE_DIR
+        - name: MODEL_DEVICE
+          value: "cuda"
+        # Storage configuration
+        - name: STORAGE_BUCKET
+          valueFrom:
+            configMapKeyRef:
+              name: visionflow-config
+              key: STORAGE_BUCKET
+        # Database and Redis
+        - name: REDIS_HOST
+          valueFrom:
+            configMapKeyRef:
+              name: visionflow-config
+              key: REDIS_HOST
+        # Secrets
+        - name: HUGGINGFACE_TOKEN
+          valueFrom:
+            secretKeyRef:
+              name: visionflow-secrets
+              key: HUGGINGFACE_TOKEN
+        - name: REDIS_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: visionflow-secrets
+              key: REDIS_PASSWORD
+        # GCP Credentials
+        - name: GOOGLE_APPLICATION_CREDENTIALS
+          value: /etc/gcp/service-account.json
+        volumeMounts:
+        - name: gcp-credentials
+          mountPath: /etc/gcp
+          readOnly: true
+        - name: model-cache
+          mountPath: /app/models
+        - name: tmp-storage
+          mountPath: /tmp
+        resources:
+          requests:
+            memory: "8Gi"
+            cpu: "2000m"
+            nvidia.com/gpu: 1
+          limits:
+            memory: "16Gi"
+            cpu: "4000m"
+            nvidia.com/gpu: 1
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: 8002
+          initialDelaySeconds: 120
+          periodSeconds: 30
+          timeoutSeconds: 10
+          failureThreshold: 3
+        readinessProbe:
+          httpGet:
+            path: /health
+            port: 8002
+          initialDelaySeconds: 60
+          periodSeconds: 15
+          timeoutSeconds: 5
+          failureThreshold: 2
+      volumes:
+      - name: gcp-credentials
+        secret:
+          secretName: visionflow-secrets
+          items:
+          - key: GOOGLE_APPLICATION_CREDENTIALS_JSON
+            path: service-account.json
+      - name: model-cache
+        persistentVolumeClaim:
+          claimName: model-cache-pvc
+      - name: tmp-storage
+        emptyDir:
+          sizeLimit: 10Gi
+      tolerations:
+      - key: nvidia.com/gpu
+        operator: Exists
+        effect: NoSchedule
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: visionflow-gpu-worker-service
+  namespace: visionflow
+  labels:
+    app: visionflow-gpu-worker
+spec:
+  selector:
+    app: visionflow-gpu-worker
+  ports:
+  - name: http
+    port: 80
+    targetPort: 8002
+    protocol: TCP
+  type: ClusterIP

@@ -1,0 +1,54 @@
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: visionflow-ingress
+  namespace: visionflow
+  annotations:
+    kubernetes.io/ingress.class: gce
+    kubernetes.io/ingress.global-static-ip-name: visionflow-ip
+    networking.gke.io/managed-certificates: visionflow-ssl-cert
+    kubernetes.io/ingress.allow-http: "false"
+    nginx.ingress.kubernetes.io/ssl-redirect: "true"
+    nginx.ingress.kubernetes.io/rate-limit-requests-per-second: "10"
+    nginx.ingress.kubernetes.io/rate-limit-burst-multiplier: "5"
+spec:
+  rules:
+  - host: api.visionflow.ai
+    http:
+      paths:
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: visionflow-api-service
+            port:
+              number: 80
+      - path: /orchestration
+        pathType: Prefix
+        backend:
+          service:
+            name: visionflow-orchestrator-service
+            port:
+              number: 80
+  - host: worker.visionflow.ai
+    http:
+      paths:
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: visionflow-gpu-worker-service
+            port:
+              number: 80
+
+---
+apiVersion: networking.gke.io/v1
+kind: ManagedCertificate
+metadata:
+  name: visionflow-ssl-cert
+  namespace: visionflow
+spec:
+  domains:
+    - api.visionflow.ai
+    - worker.visionflow.ai

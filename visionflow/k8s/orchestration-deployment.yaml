@@ -1,0 +1,131 @@
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: visionflow-orchestrator
+  namespace: visionflow
+  labels:
+    app: visionflow-orchestrator
+    version: v1
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: visionflow-orchestrator
+  template:
+    metadata:
+      labels:
+        app: visionflow-orchestrator
+        version: v1
+    spec:
+      serviceAccountName: visionflow-sa
+      containers:
+      - name: orchestrator
+        image: gcr.io/visionflow-gcp-project/visionflow-orchestrator:latest
+        ports:
+        - containerPort: 8001
+          name: http
+        env:
+        # LangChain specific configuration
+        - name: LANGCHAIN_TRACING_V2
+          valueFrom:
+            configMapKeyRef:
+              name: visionflow-config
+              key: LANGCHAIN_TRACING_V2
+        - name: LANGCHAIN_PROJECT
+          valueFrom:
+            configMapKeyRef:
+              name: visionflow-config
+              key: LANGCHAIN_PROJECT
+        - name: VERTEX_AI_PROJECT
+          valueFrom:
+            configMapKeyRef:
+              name: visionflow-config
+              key: VERTEX_AI_PROJECT
+        - name: VERTEX_AI_REGION
+          valueFrom:
+            configMapKeyRef:
+              name: visionflow-config
+              key: VERTEX_AI_REGION
+        # Database and Redis
+        - name: DB_HOST
+          valueFrom:
+            configMapKeyRef:
+              name: visionflow-config
+              key: DB_HOST
+        - name: REDIS_HOST
+          valueFrom:
+            configMapKeyRef:
+              name: visionflow-config
+              key: REDIS_HOST
+        # Secrets
+        - name: LANGCHAIN_API_KEY
+          valueFrom:
+            secretKeyRef:
+              name: visionflow-secrets
+              key: LANGCHAIN_API_KEY
+        - name: OPENAI_API_KEY
+          valueFrom:
+            secretKeyRef:
+              name: visionflow-secrets
+              key: OPENAI_API_KEY
+        - name: DB_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: visionflow-secrets
+              key: DB_PASSWORD
+        # GCP Credentials
+        - name: GOOGLE_APPLICATION_CREDENTIALS
+          value: /etc/gcp/service-account.json
+        volumeMounts:
+        - name: gcp-credentials
+          mountPath: /etc/gcp
+          readOnly: true
+        resources:
+          requests:
+            memory: "2Gi"
+            cpu: "1000m"
+          limits:
+            memory: "4Gi"
+            cpu: "2000m"
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: 8001
+          initialDelaySeconds: 60
+          periodSeconds: 30
+          timeoutSeconds: 10
+          failureThreshold: 3
+        readinessProbe:
+          httpGet:
+            path: /health
+            port: 8001
+          initialDelaySeconds: 30
+          periodSeconds: 10
+          timeoutSeconds: 5
+          failureThreshold: 2
+      volumes:
+      - name: gcp-credentials
+        secret:
+          secretName: visionflow-secrets
+          items:
+          - key: GOOGLE_APPLICATION_CREDENTIALS_JSON
+            path: service-account.json
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: visionflow-orchestrator-service
+  namespace: visionflow
+  labels:
+    app: visionflow-orchestrator
+spec:
+  selector:
+    app: visionflow-orchestrator
+  ports:
+  - name: http
+    port: 80
+    targetPort: 8001
+    protocol: TCP
+  type: ClusterIP

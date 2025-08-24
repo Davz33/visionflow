@@ -1,0 +1,160 @@
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: visionflow-api
+  namespace: visionflow
+  labels:
+    app: visionflow-api
+    version: v1
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: visionflow-api
+  template:
+    metadata:
+      labels:
+        app: visionflow-api
+        version: v1
+    spec:
+      serviceAccountName: visionflow-sa
+      containers:
+      - name: api
+        image: gcr.io/visionflow-gcp-project/visionflow-api:latest
+        ports:
+        - containerPort: 8000
+          name: http
+        - containerPort: 9090
+          name: metrics
+        env:
+        # ConfigMap values
+        - name: DB_HOST
+          valueFrom:
+            configMapKeyRef:
+              name: visionflow-config
+              key: DB_HOST
+        - name: DB_PORT
+          valueFrom:
+            configMapKeyRef:
+              name: visionflow-config
+              key: DB_PORT
+        - name: REDIS_HOST
+          valueFrom:
+            configMapKeyRef:
+              name: visionflow-config
+              key: REDIS_HOST
+        - name: STORAGE_BUCKET
+          valueFrom:
+            configMapKeyRef:
+              name: visionflow-config
+              key: STORAGE_BUCKET
+        - name: VERTEX_AI_PROJECT
+          valueFrom:
+            configMapKeyRef:
+              name: visionflow-config
+              key: VERTEX_AI_PROJECT
+        - name: LANGCHAIN_PROJECT
+          valueFrom:
+            configMapKeyRef:
+              name: visionflow-config
+              key: LANGCHAIN_PROJECT
+        # Secret values
+        - name: DB_USER
+          valueFrom:
+            secretKeyRef:
+              name: visionflow-secrets
+              key: DB_USER
+        - name: DB_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: visionflow-secrets
+              key: DB_PASSWORD
+        - name: LANGCHAIN_API_KEY
+          valueFrom:
+            secretKeyRef:
+              name: visionflow-secrets
+              key: LANGCHAIN_API_KEY
+        - name: HUGGINGFACE_TOKEN
+          valueFrom:
+            secretKeyRef:
+              name: visionflow-secrets
+              key: HUGGINGFACE_TOKEN
+        # Google Cloud credentials
+        - name: GOOGLE_APPLICATION_CREDENTIALS
+          value: /etc/gcp/service-account.json
+        volumeMounts:
+        - name: gcp-credentials
+          mountPath: /etc/gcp
+          readOnly: true
+        - name: model-cache
+          mountPath: /app/models
+        resources:
+          requests:
+            memory: "1Gi"
+            cpu: "500m"
+          limits:
+            memory: "2Gi"
+            cpu: "1000m"
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: 8000
+          initialDelaySeconds: 30
+          periodSeconds: 10
+          timeoutSeconds: 5
+          failureThreshold: 3
+        readinessProbe:
+          httpGet:
+            path: /health
+            port: 8000
+          initialDelaySeconds: 5
+          periodSeconds: 5
+          timeoutSeconds: 3
+          failureThreshold: 2
+      volumes:
+      - name: gcp-credentials
+        secret:
+          secretName: visionflow-secrets
+          items:
+          - key: GOOGLE_APPLICATION_CREDENTIALS_JSON
+            path: service-account.json
+      - name: model-cache
+        persistentVolumeClaim:
+          claimName: model-cache-pvc
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: visionflow-api-service
+  namespace: visionflow
+  labels:
+    app: visionflow-api
+spec:
+  selector:
+    app: visionflow-api
+  ports:
+  - name: http
+    port: 80
+    targetPort: 8000
+    protocol: TCP
+  - name: metrics
+    port: 9090
+    targetPort: 9090
+    protocol: TCP
+  type: ClusterIP
+
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: model-cache-pvc
+  namespace: visionflow
+spec:
+  accessModes:
+    - ReadWriteMany
+  storageClassName: "standard-rwo"
+  resources:
+    requests:
+      storage: 50Gi

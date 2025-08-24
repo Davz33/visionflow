@@ -1,0 +1,161 @@
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: visionflow-gcp-tracking
+  namespace: visionflow
+  labels:
+    app: visionflow-gcp-tracking
+    version: v1
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: visionflow-gcp-tracking
+  template:
+    metadata:
+      labels:
+        app: visionflow-gcp-tracking
+        version: v1
+    spec:
+      serviceAccountName: visionflow-sa
+      containers:
+      - name: gcp-tracking
+        image: gcr.io/visionflow-gcp-project/visionflow-gcp-tracking:latest
+        ports:
+        - containerPort: 8003
+          name: http
+        env:
+        # GCP Configuration
+        - name: VERTEX_AI_PROJECT
+          valueFrom:
+            configMapKeyRef:
+              name: visionflow-config
+              key: VERTEX_AI_PROJECT
+        - name: VERTEX_AI_REGION
+          valueFrom:
+            configMapKeyRef:
+              name: visionflow-config
+              key: VERTEX_AI_REGION
+        - name: STORAGE_BUCKET
+          valueFrom:
+            configMapKeyRef:
+              name: visionflow-config
+              key: STORAGE_BUCKET
+        # GCP Tracking Settings
+        - name: GCP_TRACKING_ENABLED
+          valueFrom:
+            configMapKeyRef:
+              name: visionflow-config
+              key: GCP_TRACKING_ENABLED
+        - name: CLOUD_LOGGING_ENABLED
+          valueFrom:
+            configMapKeyRef:
+              name: visionflow-config
+              key: CLOUD_LOGGING_ENABLED
+        - name: CLOUD_MONITORING_ENABLED
+          valueFrom:
+            configMapKeyRef:
+              name: visionflow-config
+              key: CLOUD_MONITORING_ENABLED
+        # Database for legacy compatibility
+        - name: DB_HOST
+          valueFrom:
+            configMapKeyRef:
+              name: visionflow-config
+              key: DB_HOST
+        - name: REDIS_HOST
+          valueFrom:
+            configMapKeyRef:
+              name: visionflow-config
+              key: REDIS_HOST
+        # Secrets
+        - name: DB_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: visionflow-secrets
+              key: DB_PASSWORD
+        # Resource limits
+        resources:
+          requests:
+            memory: "256Mi"
+            cpu: "250m"
+          limits:
+            memory: "512Mi"
+            cpu: "500m"
+        # Health checks
+        livenessProbe:
+          httpGet:
+            path: /tracking/health
+            port: 8003
+          initialDelaySeconds: 30
+          periodSeconds: 10
+        readinessProbe:
+          httpGet:
+            path: /tracking/health
+            port: 8003
+          initialDelaySeconds: 5
+          periodSeconds: 5
+        # Security context
+        securityContext:
+          runAsNonRoot: true
+          runAsUser: 1000
+          allowPrivilegeEscalation: false
+          readOnlyRootFilesystem: true
+        # Volume mounts for tmp and cache
+        volumeMounts:
+        - name: tmp-volume
+          mountPath: /tmp
+        - name: cache-volume
+          mountPath: /app/cache
+      volumes:
+      - name: tmp-volume
+        emptyDir: {}
+      - name: cache-volume
+        emptyDir: {}
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: visionflow-gcp-tracking-service
+  namespace: visionflow
+  labels:
+    app: visionflow-gcp-tracking
+spec:
+  selector:
+    app: visionflow-gcp-tracking
+  ports:
+  - name: http
+    port: 8003
+    targetPort: 8003
+    protocol: TCP
+  type: ClusterIP
+
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: visionflow-gcp-tracking-ingress
+  namespace: visionflow
+  annotations:
+    kubernetes.io/ingress.class: "nginx"
+    nginx.ingress.kubernetes.io/ssl-redirect: "true"
+    nginx.ingress.kubernetes.io/force-ssl-redirect: "true"
+    cert-manager.io/cluster-issuer: "letsencrypt-prod"
+spec:
+  tls:
+  - hosts:
+    - tracking.visionflow.ai
+    secretName: visionflow-gcp-tracking-tls
+  rules:
+  - host: tracking.visionflow.ai
+    http:
+      paths:
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: visionflow-gcp-tracking-service
+            port:
+              number: 8003

@@ -1,0 +1,37 @@
+# Industry Standard Video Evaluation Metrics Dependencies
+# Based on latest research: LPIPS, FVMD, CLIP, ETVA
+
+# Core dependencies
+torch>=2.0.0
+numpy>=1.21.0
+
+# LPIPS (Learned Perceptual Image Patch Similarity)
+# Official implementation: https://github.com/richzhang/PerceptualSimilarity
+lpips>=0.1.4
+
+# FVMD (Fréchet Video Motion Distance)
+# GitHub: https://github.com/DSL-Lab/FVMD-frechet-video-motion-distance
+fvmd>=0.1.0
+
+# CLIP (Contrastive Language-Image Pre-training)
+# OpenAI's CLIP for text-video alignment
+clip @ git+https://github.com/openai/CLIP.git
+
+# Alternative CLIP implementations
+# open_clip: https://github.com/mlfoundations/open_clip
+open_clip_torch>=2.20.0
+
+# Video processing utilities
+opencv-python>=4.8.0
+Pillow>=9.0.0
+
+# Optional: GPU acceleration
+# torchvision>=0.15.0  # If not already included with torch
+
+# Development dependencies
+pytest>=7.0.0
+black>=23.0.0
+flake8>=6.0.0
+
+# Note: Some packages may require specific CUDA versions for GPU support
+# Check compatibility with your system's CUDA version

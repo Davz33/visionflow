@@ -1,0 +1,88 @@
+version: '3.8'
+
+services:
+  api-gateway:
+    volumes:
+      # Mount source code for live development
+      - ./visionflow:/app/visionflow:rw
+      - ./pyproject.toml:/app/pyproject.toml:ro
+      - ./.env:/app/.env:ro
+      # Mount directories for runtime data
+      - ./logs:/app/logs:rw
+      - ./models:/app/models:rw
+      - ./generated:/app/generated:rw
+    environment:
+      - PYTHONPATH=/app
+      - ENVIRONMENT=development
+      - DEBUG=true
+      - RELOAD=true
+      # Database configuration
+      - DB_HOST=postgres
+      - DB_PORT=5432
+      - DB_NAME=visionflow
+      - DB_USER=visionflow
+      - DB_PASSWORD=visionflow
+      # Redis configuration
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      # Storage configuration
+      - STORAGE_ENDPOINT=minio:9000
+      - STORAGE_ACCESS_KEY=minio
+      - STORAGE_SECRET_KEY=minio123
+      # API configuration
+      - API_HOST=0.0.0.0
+      - API_PORT=8000
+      - LOG_LEVEL=info
+      # HuggingFace configuration
+      - HUGGINGFACE_TOKEN=hf_YOUR_HUGGINGFACE_TOKEN_HERE
+    command: ["uvicorn", "visionflow.api.main:app", "--host", "0.0.0.0", "--port", "8000", "--reload"]
+    develop:
+      watch:
+        - action: sync
+          path: ./visionflow
+          target: /app/visionflow
+        - action: restart
+          path: ./pyproject.toml
+
+  generation-service:
+    volumes:
+      # Mount source code for live development
+      - ./visionflow:/app/visionflow:rw
+      - ./pyproject.toml:/app/pyproject.toml:ro
+      - ./.env:/app/.env:ro
+      # Mount directories for runtime data
+      - ./logs:/app/logs:rw
+      - ./models:/app/models:rw
+      - ./generated:/app/generated:rw
+    environment:
+      - PYTHONPATH=/app
+      - ENVIRONMENT=development
+      - DEBUG=true
+      - RELOAD=true
+    command: ["uvicorn", "visionflow.services.generation.service:app", "--host", "0.0.0.0", "--port", "8002", "--reload"]
+    develop:
+      watch:
+        - action: sync
+          path: ./visionflow
+          target: /app/visionflow
+
+  celery-worker:
+    volumes:
+      # Mount source code for live development
+      - ./visionflow:/app/visionflow:rw
+      - ./pyproject.toml:/app/pyproject.toml:ro
+      - ./.env:/app/.env:ro
+      # Mount directories for runtime data
+      - ./logs:/app/logs:rw
+      - ./models:/app/models:rw
+      - ./generated:/app/generated:rw
+    environment:
+      - PYTHONPATH=/app
+      - ENVIRONMENT=development
+      - DEBUG=true
+    command: ["celery", "-A", "visionflow.services.celery_app", "worker", "--loglevel=info"]
+    develop:
+      watch:
+        - action: sync
+          path: ./visionflow
+          target: /app/visionflow

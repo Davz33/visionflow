@@ -1,0 +1,221 @@
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: prometheus-config
+  namespace: visionflow
+data:
+  prometheus.yml: |
+    global:
+      scrape_interval: 15s
+      evaluation_interval: 15s
+    
+    rule_files:
+      - "visionflow_rules.yml"
+    
+    scrape_configs:
+      - job_name: 'visionflow-api'
+        static_configs:
+          - targets: ['visionflow-api-service:9090']
+        metrics_path: /metrics
+        scrape_interval: 5s
+      
+      - job_name: 'visionflow-orchestrator'
+        static_configs:
+          - targets: ['visionflow-orchestrator-service:80']
+        metrics_path: /metrics
+        scrape_interval: 10s
+      
+      - job_name: 'visionflow-gpu-worker'
+        static_configs:
+          - targets: ['visionflow-gpu-worker-service:80']
+        metrics_path: /metrics
+        scrape_interval: 15s
+      
+      - job_name: 'kubernetes-pods'
+        kubernetes_sd_configs:
+          - role: pod
+            namespaces:
+              names:
+                - visionflow
+        relabel_configs:
+          - source_labels: [__meta_kubernetes_pod_annotation_prometheus_io_scrape]
+            action: keep
+            regex: true
+
+  visionflow_rules.yml: |
+    groups:
+      - name: visionflow_alerts
+        rules:
+          - alert: HighVideoGenerationLatency
+            expr: histogram_quantile(0.95, rate(video_generation_duration_seconds_bucket[5m])) > 30
+            for: 2m
+            labels:
+              severity: warning
+            annotations:
+              summary: "High video generation latency"
+              description: "95th percentile latency is {{ $value }} seconds"
+          
+          - alert: LowVideoGenerationSuccessRate
+            expr: rate(video_generation_success_total[5m]) / rate(video_generation_total[5m]) < 0.9
+            for: 5m
+            labels:
+              severity: critical
+            annotations:
+              summary: "Low video generation success rate"
+              description: "Success rate is {{ $value | humanizePercentage }}"
+          
+          - alert: LangChainWorkflowFailures
+            expr: rate(langchain_workflow_errors_total[5m]) > 0.1
+            for: 2m
+            labels:
+              severity: warning
+            annotations:
+              summary: "LangChain workflow failures detected"
+              description: "Error rate is {{ $value }} per second"
+
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: prometheus
+  namespace: visionflow
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: prometheus
+  template:
+    metadata:
+      labels:
+        app: prometheus
+    spec:
+      containers:
+      - name: prometheus
+        image: prom/prometheus:latest
+        ports:
+        - containerPort: 9090
+        volumeMounts:
+        - name: prometheus-config
+          mountPath: /etc/prometheus
+        - name: prometheus-storage
+          mountPath: /prometheus
+        command:
+        - /bin/prometheus
+        - --config.file=/etc/prometheus/prometheus.yml
+        - --storage.tsdb.path=/prometheus
+        - --web.console.libraries=/etc/prometheus/console_libraries
+        - --web.console.templates=/etc/prometheus/consoles
+        - --storage.tsdb.retention.time=200h
+        - --web.enable-lifecycle
+        resources:
+          requests:
+            memory: "512Mi"
+            cpu: "250m"
+          limits:
+            memory: "1Gi"
+            cpu: "500m"
+      volumes:
+      - name: prometheus-config
+        configMap:
+          name: prometheus-config
+      - name: prometheus-storage
+        persistentVolumeClaim:
+          claimName: prometheus-storage-pvc
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: prometheus-service
+  namespace: visionflow
+spec:
+  selector:
+    app: prometheus
+  ports:
+  - port: 9090
+    targetPort: 9090
+  type: ClusterIP
+
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: prometheus-storage-pvc
+  namespace: visionflow
+spec:
+  accessModes:
+    - ReadWriteOnce
+  storageClassName: "standard-rwo"
+  resources:
+    requests:
+      storage: 10Gi
+
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: grafana
+  namespace: visionflow
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: grafana
+  template:
+    metadata:
+      labels:
+        app: grafana
+    spec:
+      containers:
+      - name: grafana
+        image: grafana/grafana:latest
+        ports:
+        - containerPort: 3000
+        env:
+        - name: GF_SECURITY_ADMIN_PASSWORD
+          value: "admin123"  # Change in production
+        - name: GF_INSTALL_PLUGINS
+          value: "grafana-kubernetes-app"
+        volumeMounts:
+        - name: grafana-storage
+          mountPath: /var/lib/grafana
+        resources:
+          requests:
+            memory: "256Mi"
+            cpu: "100m"
+          limits:
+            memory: "512Mi"
+            cpu: "200m"
+      volumes:
+      - name: grafana-storage
+        persistentVolumeClaim:
+          claimName: grafana-storage-pvc
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: grafana-service
+  namespace: visionflow
+spec:
+  selector:
+    app: grafana
+  ports:
+  - port: 3000
+    targetPort: 3000
+  type: LoadBalancer
+
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: grafana-storage-pvc
+  namespace: visionflow
+spec:
+  accessModes:
+    - ReadWriteOnce
+  storageClassName: "standard-rwo"
+  resources:
+    requests:
+      storage: 5Gi

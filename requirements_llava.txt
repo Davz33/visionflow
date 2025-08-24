@@ -1,0 +1,38 @@
+# LLaVA Dependencies for Local Video Evaluation
+# This file contains the dependencies needed to run LLaVA locally for subjective video analysis
+
+# Core ML/DL Framework
+torch>=2.0.0
+torchvision>=0.15.0
+transformers>=4.35.0
+accelerate>=0.24.0
+
+# LLaVA-specific dependencies
+llava-torch>=1.1.0
+llava-mmt>=1.1.0
+
+# Image processing
+Pillow>=9.0.0
+opencv-python>=4.8.0
+numpy>=1.24.0
+
+# Video processing
+ffmpeg-python>=0.2.0
+av>=10.0.0
+
+# Utilities
+tqdm>=4.65.0
+requests>=2.31.0
+huggingface-hub>=0.17.0
+
+# Optional: GPU acceleration
+# nvidia-ml-py3>=11.0.0  # Uncomment if using NVIDIA GPUs
+
+# Optional: Memory optimization
+# bitsandbytes>=0.41.0   # Uncomment for 4-bit quantization
+# xformers>=0.0.22       # Uncomment for memory-efficient attention
+
+# Development dependencies (optional)
+# pytest>=7.0.0
+# black>=23.0.0
+# flake8>=6.0.0

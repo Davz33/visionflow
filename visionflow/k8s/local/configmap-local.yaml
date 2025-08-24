@@ -1,0 +1,36 @@
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: visionflow-config
+  namespace: visionflow
+data:
+  # Local database (can be local postgres or cloud)
+  DB_HOST: "visionflow-postgres"
+  DB_PORT: "5432"
+  DB_NAME: "visionflow"
+  
+  # Local Redis
+  REDIS_HOST: "visionflow-redis"
+  REDIS_PORT: "6379"
+  
+  # Local storage (MinIO) with cloud backup option
+  STORAGE_ENDPOINT: "visionflow-minio:9000"
+  STORAGE_BUCKET: "visionflow-local"
+  
+  # Model configuration
+  WAN_MODEL_PATH: "multimodalart/wan2-1-fast"
+  MODEL_CACHE_DIR: "/app/models"
+  MODEL_DEVICE: "auto"
+  
+  # Cloud services (remote access from local)
+  VERTEX_AI_PROJECT: "visionflow-gcp-project"
+  VERTEX_AI_REGION: "us-central1"
+  
+  # Environment
+  ENVIRONMENT: "local"
+  LOG_LEVEL: "debug"
+  
+  # Local service discovery
+  ORCHESTRATOR_SERVICE: "visionflow-orchestrator:8001"
+  GENERATION_SERVICE: "visionflow-generation:8002"

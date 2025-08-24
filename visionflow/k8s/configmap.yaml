@@ -1,0 +1,52 @@
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: visionflow-config
+  namespace: visionflow
+data:
+  # Database Configuration
+  DB_HOST: "postgres-service"
+  DB_PORT: "5432"
+  DB_NAME: "visionflow"
+  
+  # Redis Configuration
+  REDIS_HOST: "redis-service"
+  REDIS_PORT: "6379"
+  REDIS_DB: "0"
+  
+  # Google Cloud Storage Configuration
+  STORAGE_ENDPOINT: "storage.googleapis.com"
+  STORAGE_BUCKET: "visionflow-media-bucket"
+  STORAGE_SECURE: "true"
+  
+  # API Configuration
+  API_HOST: "0.0.0.0"
+  API_PORT: "8000"
+  API_WORKERS: "4"
+  LOG_LEVEL: "info"
+  
+  # Model Configuration
+  WAN_MODEL_PATH: "multimodalart/wan2-1-fast"
+  MODEL_CACHE_DIR: "/app/models"
+  MODEL_DEVICE: "auto"
+  DEFAULT_RESOLUTION: "512x512"
+  DEFAULT_FPS: "24"
+  
+  # LangChain Configuration
+  LANGCHAIN_TRACING_V2: "true"
+  LANGCHAIN_PROJECT: "visionflow-orchestration"
+  
+  # Google Cloud Vertex AI
+  VERTEX_AI_PROJECT: "visionflow-gcp-project"
+  VERTEX_AI_REGION: "us-central1"
+  
+  # GCP Tracking (replaces MLFlow)
+  GCP_TRACKING_ENABLED: "true"
+  CLOUD_LOGGING_ENABLED: "true"
+  CLOUD_MONITORING_ENABLED: "true"
+  
+  # Monitoring
+  PROMETHEUS_PORT: "9090"
+  GRAFANA_PORT: "3000"
+  ENABLE_METRICS: "true"

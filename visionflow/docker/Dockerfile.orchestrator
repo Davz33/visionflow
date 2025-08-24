@@ -1,0 +1,56 @@
+FROM python:3.11-slim
+
+# Set environment variables
+ENV PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONUNBUFFERED=1 \
+    PYTHONPATH=/app \
+    PIP_NO_CACHE_DIR=1 \
+    PIP_DISABLE_PIP_VERSION_CHECK=1
+
+# Set work directory
+WORKDIR /app
+
+# Install system dependencies
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends \
+        build-essential \
+        curl \
+        git \
+        libpq-dev \
+        && rm -rf /var/lib/apt/lists/*
+
+# Copy requirements first for better caching
+COPY pyproject.toml requirements.txt* ./
+
+# Install Python dependencies with LangChain extras
+RUN pip install --upgrade pip \
+    && pip install -e .[dev,monitoring] \
+    && pip install \
+        langchain>=0.1.0 \
+        langgraph>=0.0.20 \
+        langchain-google-vertexai>=0.1.0 \
+        langchain-community>=0.0.10 \
+        google-cloud-storage>=2.10.0 \
+        google-cloud-aiplatform>=1.35.0 \
+        google-cloud-secret-manager>=2.16.0
+
+# Copy application code
+COPY . .
+
+# Create necessary directories
+RUN mkdir -p /app/logs /app/models
+
+# Create non-root user
+RUN useradd --create-home --shell /bin/bash app \
+    && chown -R app:app /app
+USER app
+
+# Expose port
+EXPOSE 8001
+
+# Health check
+HEALTHCHECK --interval=30s --timeout=10s --start-period=60s --retries=3 \
+    CMD curl -f http://localhost:8001/health || exit 1
+
+# Default command
+CMD ["uvicorn", "visionflow.services.orchestration.service:app", "--host", "0.0.0.0", "--port", "8001"]
