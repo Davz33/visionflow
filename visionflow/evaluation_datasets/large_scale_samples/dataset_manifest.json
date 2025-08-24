@@ -1,0 +1,305 @@
+{
+  "metadata": {
+    "name": "Large-Scale Text-to-Video Evaluation Dataset",
+    "description": "Curated 30 samples representing MSR-VTT, LSMDC, YouCook2, WebVid and other datasets",
+    "created_at": "2025-08-24T23:11:33.761222",
+    "total_videos": 22,
+    "source_datasets": [
+      "msr_vtt_style",
+      "lsmdc_style",
+      "youcook2_style",
+      "webvid_style",
+      "diverse"
+    ],
+    "download_duration_estimate": "3-5 minutes",
+    "actual_download_time": "113.1s"
+  },
+  "videos": [
+    {
+      "filename": "msr_vtt_style_04.mp4",
+      "path": "evaluation_datasets/large_scale_samples/msr_vtt_style_04.mp4",
+      "prompt": "Scenic mountain landscapes and outdoor adventures",
+      "category": "landscape",
+      "source_dataset": "msr_vtt_style",
+      "quality": "medium",
+      "duration_estimate": "6s",
+      "tags": [
+        "landscape",
+        "msr_vtt_style"
+      ]
+    },
+    {
+      "filename": "msr_vtt_style_03.mp4",
+      "path": "evaluation_datasets/large_scale_samples/msr_vtt_style_03.mp4",
+      "prompt": "Fire and flames with cinematic effects",
+      "category": "nature",
+      "source_dataset": "msr_vtt_style",
+      "quality": "medium",
+      "duration_estimate": "12s",
+      "tags": [
+        "nature",
+        "msr_vtt_style"
+      ]
+    },
+    {
+      "filename": "lsmdc_style_01.mp4",
+      "path": "evaluation_datasets/large_scale_samples/lsmdc_style_01.mp4",
+      "prompt": "Dynamic car scenes with motion and speed",
+      "category": "action",
+      "source_dataset": "lsmdc_style",
+      "quality": "medium",
+      "duration_estimate": "5s",
+      "tags": [
+        "action",
+        "lsmdc_style"
+      ]
+    },
+    {
+      "filename": "msr_vtt_style_05.mp4",
+      "path": "evaluation_datasets/large_scale_samples/msr_vtt_style_05.mp4",
+      "prompt": "Colorful carnival and fun activities",
+      "category": "human_activity",
+      "source_dataset": "msr_vtt_style",
+      "quality": "medium",
+      "duration_estimate": "9s",
+      "tags": [
+        "human_activity",
+        "msr_vtt_style"
+      ]
+    },
+    {
+      "filename": "lsmdc_style_02.mp4",
+      "path": "evaluation_datasets/large_scale_samples/lsmdc_style_02.mp4",
+      "prompt": "Close-up dramatic moments with emotional intensity",
+      "category": "dramatic",
+      "source_dataset": "lsmdc_style",
+      "quality": "medium",
+      "duration_estimate": "4s",
+      "tags": [
+        "dramatic",
+        "lsmdc_style"
+      ]
+    },
+    {
+      "filename": "lsmdc_style_04.mp4",
+      "path": "evaluation_datasets/large_scale_samples/lsmdc_style_04.mp4",
+      "prompt": "Vehicle moving through different terrains and environments",
+      "category": "transportation",
+      "source_dataset": "lsmdc_style",
+      "quality": "medium",
+      "duration_estimate": "8s",
+      "tags": [
+        "transportation",
+        "lsmdc_style"
+      ]
+    },
+    {
+      "filename": "youcook2_style_01.mp4",
+      "path": "evaluation_datasets/large_scale_samples/youcook2_style_01.mp4",
+      "prompt": "Detailed product demonstration and review process",
+      "category": "instructional",
+      "source_dataset": "youcook2_style",
+      "quality": "medium",
+      "duration_estimate": "7s",
+      "tags": [
+        "instructional",
+        "youcook2_style"
+      ]
+    },
+    {
+      "filename": "lsmdc_style_05.mp4",
+      "path": "evaluation_datasets/large_scale_samples/lsmdc_style_05.mp4",
+      "prompt": "Sci-fi scenes with mechanical and futuristic elements",
+      "category": "sci_fi",
+      "source_dataset": "lsmdc_style",
+      "quality": "medium",
+      "duration_estimate": "3s",
+      "tags": [
+        "sci_fi",
+        "lsmdc_style"
+      ]
+    },
+    {
+      "filename": "youcook2_style_02.mp4",
+      "path": "evaluation_datasets/large_scale_samples/youcook2_style_02.mp4",
+      "prompt": "Step-by-step process documentation with narration",
+      "category": "instructional",
+      "source_dataset": "youcook2_style",
+      "quality": "medium",
+      "duration_estimate": "5s",
+      "tags": [
+        "instructional",
+        "youcook2_style"
+      ]
+    },
+    {
+      "filename": "lsmdc_style_03.mp4",
+      "path": "evaluation_datasets/large_scale_samples/lsmdc_style_03.mp4",
+      "prompt": "Fantasy adventure with dramatic lighting and atmosphere",
+      "category": "fantasy",
+      "source_dataset": "lsmdc_style",
+      "quality": "medium",
+      "duration_estimate": "6s",
+      "tags": [
+        "fantasy",
+        "lsmdc_style"
+      ]
+    },
+    {
+      "filename": "youcook2_style_03.mp4",
+      "path": "evaluation_datasets/large_scale_samples/youcook2_style_03.mp4",
+      "prompt": "Comparative analysis and selection process",
+      "category": "instructional",
+      "source_dataset": "youcook2_style",
+      "quality": "medium",
+      "duration_estimate": "6s",
+      "tags": [
+        "instructional",
+        "youcook2_style"
+      ]
+    },
+    {
+      "filename": "msr_vtt_style_02.mp4",
+      "path": "evaluation_datasets/large_scale_samples/msr_vtt_style_02.mp4",
+      "prompt": "Animated characters in a surreal mechanical world",
+      "category": "animation",
+      "source_dataset": "msr_vtt_style",
+      "quality": "medium",
+      "duration_estimate": "8s",
+      "tags": [
+        "animation",
+        "msr_vtt_style"
+      ]
+    },
+    {
+      "filename": "diverse_01.mp4",
+      "path": "evaluation_datasets/large_scale_samples/diverse_01.mp4",
+      "prompt": "Basic sample video for testing purposes",
+      "category": "test",
+      "source_dataset": "diverse",
+      "quality": "medium",
+      "duration_estimate": "11s",
+      "tags": [
+        "test",
+        "diverse"
+      ]
+    },
+    {
+      "filename": "diverse_02.mp4",
+      "path": "evaluation_datasets/large_scale_samples/diverse_02.mp4",
+      "prompt": "Short duration sample with clear content",
+      "category": "test",
+      "source_dataset": "diverse",
+      "quality": "medium",
+      "duration_estimate": "5s",
+      "tags": [
+        "test",
+        "diverse"
+      ]
+    },
+    {
+      "filename": "msr_vtt_style_01.mp4",
+      "path": "evaluation_datasets/large_scale_samples/msr_vtt_style_01.mp4",
+      "prompt": "A cute bunny character in a forest environment",
+      "category": "animation",
+      "source_dataset": "msr_vtt_style",
+      "quality": "medium",
+      "duration_estimate": "10s",
+      "tags": [
+        "animation",
+        "msr_vtt_style"
+      ]
+    },
+    {
+      "filename": "diverse_03.mp4",
+      "path": "evaluation_datasets/large_scale_samples/diverse_03.mp4",
+      "prompt": "Medium duration sample for evaluation",
+      "category": "test",
+      "source_dataset": "diverse",
+      "quality": "medium",
+      "duration_estimate": "10s",
+      "tags": [
+        "test",
+        "diverse"
+      ]
+    },
+    {
+      "filename": "diverse_04.mp4",
+      "path": "evaluation_datasets/large_scale_samples/diverse_04.mp4",
+      "prompt": "Extended sample for comprehensive testing",
+      "category": "test",
+      "source_dataset": "diverse",
+      "quality": "medium",
+      "duration_estimate": "15s",
+      "tags": [
+        "test",
+        "diverse"
+      ]
+    },
+    {
+      "filename": "diverse_06.mp4",
+      "path": "evaluation_datasets/large_scale_samples/diverse_06.mp4",
+      "prompt": "High definition animation sample",
+      "category": "animation",
+      "source_dataset": "diverse",
+      "quality": "medium",
+      "duration_estimate": "3s",
+      "tags": [
+        "animation",
+        "diverse"
+      ]
+    },
+    {
+      "filename": "diverse_07.mp4",
+      "path": "evaluation_datasets/large_scale_samples/diverse_07.mp4",
+      "prompt": "Classic animation test video",
+      "category": "animation",
+      "source_dataset": "diverse",
+      "quality": "medium",
+      "duration_estimate": "4s",
+      "tags": [
+        "animation",
+        "diverse"
+      ]
+    },
+    {
+      "filename": "diverse_05.mp4",
+      "path": "evaluation_datasets/large_scale_samples/diverse_05.mp4",
+      "prompt": "Longer sample for detailed evaluation",
+      "category": "test",
+      "source_dataset": "diverse",
+      "quality": "medium",
+      "duration_estimate": "20s",
+      "tags": [
+        "test",
+        "diverse"
+      ]
+    },
+    {
+      "filename": "diverse_10.mp4",
+      "path": "evaluation_datasets/large_scale_samples/diverse_10.mp4",
+      "prompt": "Ocean and nature content sample",
+      "category": "nature",
+      "source_dataset": "diverse",
+      "quality": "medium",
+      "duration_estimate": "12s",
+      "tags": [
+        "nature",
+        "diverse"
+      ]
+    },
+    {
+      "filename": "diverse_09.mp4",
+      "path": "evaluation_datasets/large_scale_samples/diverse_09.mp4",
+      "prompt": "Open source animation sample",
+      "category": "animation",
+      "source_dataset": "diverse",
+      "quality": "medium",
+      "duration_estimate": "6s",
+      "tags": [
+        "animation",
+        "diverse"
+      ]
+    }
+  ]
+}

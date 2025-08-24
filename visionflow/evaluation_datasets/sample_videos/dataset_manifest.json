@@ -1,0 +1,9 @@
+{
+  "metadata": {
+    "name": "Sample Evaluation Dataset",
+    "description": "Sample videos for evaluation testing",
+    "created_at": "2025-01-24",
+    "total_videos": 3
+  },
+  "videos": []
+}

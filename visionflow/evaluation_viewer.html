@@ -1,0 +1,591 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WAN Video Evaluation Viewer</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            color: #333;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        .header {
+            text-align: center;
+            color: white;
+            margin-bottom: 30px;
+        }
+
+        .header h1 {
+            font-size: 2.5rem;
+            margin-bottom: 10px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+        }
+
+        .header p {
+            font-size: 1.1rem;
+            opacity: 0.9;
+        }
+
+        .tabs {
+            display: flex;
+            background: white;
+            border-radius: 15px 15px 0 0;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+            overflow: hidden;
+        }
+
+        .tab {
+            flex: 1;
+            padding: 20px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            border: none;
+            background: #f8f9fa;
+            font-size: 1rem;
+            font-weight: 600;
+        }
+
+        .tab.active {
+            background: white;
+            color: #667eea;
+        }
+
+        .tab:hover:not(.active) {
+            background: #e9ecef;
+        }
+
+        .tab-content {
+            background: white;
+            border-radius: 0 0 15px 15px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+            min-height: 600px;
+        }
+
+        .category-section {
+            display: none;
+            padding: 30px;
+        }
+
+        .category-section.active {
+            display: block;
+        }
+
+        .category-header {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+
+        .category-title {
+            font-size: 1.8rem;
+            color: #333;
+            margin-bottom: 10px;
+        }
+
+        .category-count {
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: white;
+            padding: 8px 20px;
+            border-radius: 25px;
+            display: inline-block;
+            font-weight: 600;
+        }
+
+        .video-navigation {
+            display: flex;
+            gap: 15px;
+            margin-bottom: 30px;
+            flex-wrap: wrap;
+            justify-content: center;
+        }
+
+        .video-nav-item {
+            padding: 12px 20px;
+            border: 2px solid #e9ecef;
+            border-radius: 25px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            background: white;
+            text-align: center;
+            min-width: 120px;
+        }
+
+        .video-nav-item:hover {
+            border-color: #667eea;
+            transform: translateY(-2px);
+        }
+
+        .video-nav-item.active {
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: white;
+            border-color: transparent;
+        }
+
+        .video-display {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 30px;
+            align-items: start;
+        }
+
+        .video-player-section {
+            background: #f8f9fa;
+            padding: 25px;
+            border-radius: 15px;
+            border: 1px solid #e9ecef;
+        }
+
+        .video-player {
+            width: 100%;
+            border-radius: 10px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+            background: #000;
+        }
+
+        .video-info-section {
+            background: #f8f9fa;
+            padding: 25px;
+            border-radius: 15px;
+            border: 1px solid #e9ecef;
+        }
+
+        .info-card {
+            background: white;
+            padding: 20px;
+            border-radius: 12px;
+            margin-bottom: 20px;
+            border-left: 4px solid #667eea;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+
+        .info-label {
+            font-weight: 600;
+            color: #495057;
+            margin-bottom: 8px;
+            text-transform: uppercase;
+            font-size: 0.85rem;
+            letter-spacing: 1px;
+        }
+
+        .info-value {
+            font-size: 1.1rem;
+            color: #333;
+            line-height: 1.5;
+        }
+
+        .score-display {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .score-circle {
+            width: 80px;
+            height: 80px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            font-size: 1.2rem;
+            color: white;
+            position: relative;
+        }
+
+        .score-high { background: linear-gradient(135deg, #28a745, #20c997); }
+        .score-medium { background: linear-gradient(135deg, #ffc107, #fd7e14); }
+        .score-low { background: linear-gradient(135deg, #dc3545, #e83e8c); }
+
+        .confidence-level {
+            padding: 6px 16px;
+            border-radius: 20px;
+            font-weight: 600;
+            text-transform: uppercase;
+            font-size: 0.8rem;
+            letter-spacing: 1px;
+        }
+
+        .confidence-high { background: #d4edda; color: #155724; }
+        .confidence-medium { background: #fff3cd; color: #856404; }
+        .confidence-low { background: #f8d7da; color: #721c24; }
+
+        .decision-badge {
+            padding: 10px 20px;
+            border-radius: 25px;
+            font-weight: 600;
+            text-transform: uppercase;
+            font-size: 0.9rem;
+            letter-spacing: 1px;
+            text-align: center;
+        }
+
+        .decision-flag_monitoring { 
+            background: linear-gradient(135deg, #17a2b8, #20c997); 
+            color: white; 
+        }
+        .decision-queue_review { 
+            background: linear-gradient(135deg, #ffc107, #fd7e14); 
+            color: white; 
+        }
+        .decision-auto_approve { 
+            background: linear-gradient(135deg, #28a745, #20c997); 
+            color: white; 
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 60px 20px;
+            color: #6c757d;
+        }
+
+        .empty-state-icon {
+            font-size: 4rem;
+            margin-bottom: 20px;
+            opacity: 0.5;
+        }
+
+        .loading {
+            text-align: center;
+            padding: 40px;
+            color: #6c757d;
+        }
+
+        .error {
+            text-align: center;
+            padding: 40px;
+            color: #dc3545;
+            background: #f8d7da;
+            border-radius: 10px;
+            margin: 20px 0;
+        }
+
+        @media (max-width: 768px) {
+            .video-display {
+                grid-template-columns: 1fr;
+            }
+            
+            .tabs {
+                flex-direction: column;
+            }
+            
+            .video-navigation {
+                justify-content: center;
+            }
+            
+            .video-nav-item {
+                min-width: 100px;
+                font-size: 0.9rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🎬 WAN Video Evaluation Viewer</h1>
+            <p>Interactive review of large-scale text-to-video evaluation results</p>
+        </div>
+
+        <div class="tabs">
+            <button class="tab active" onclick="showCategory('flag_monitoring')">
+                🔍 Flag Monitoring
+                <span id="flag-count" class="category-count">0</span>
+            </button>
+            <button class="tab" onclick="showCategory('queue_review')">
+                👥 Queue Review
+                <span id="review-count" class="category-count">0</span>
+            </button>
+            <button class="tab" onclick="showCategory('auto_approve')">
+                ✅ Auto Approve
+                <span id="approve-count" class="category-count">0</span>
+            </button>
+        </div>
+
+        <div class="tab-content">
+            <!-- Flag Monitoring Section -->
+            <div id="flag_monitoring" class="category-section active">
+                <div class="category-header">
+                    <h2 class="category-title">🔍 Flagged for Monitoring</h2>
+                    <p>Medium-quality content requiring monitoring</p>
+                </div>
+                <div id="flag-navigation" class="video-navigation"></div>
+                <div id="flag-display" class="video-display"></div>
+            </div>
+
+            <!-- Queue Review Section -->
+            <div id="queue_review" class="category-section">
+                <div class="category-header">
+                    <h2 class="category-title">👥 Queue for Review</h2>
+                    <p>Lower-confidence results requiring human review</p>
+                </div>
+                <div id="review-navigation" class="video-navigation"></div>
+                <div id="review-display" class="video-display"></div>
+            </div>
+
+            <!-- Auto Approve Section -->
+            <div id="auto_approve" class="category-section">
+                <div class="category-header">
+                    <h2 class="category-title">✅ Auto Approved</h2>
+                    <p>High-quality content automatically approved</p>
+                </div>
+                <div id="approve-navigation" class="video-navigation"></div>
+                <div id="approve-display" class="video-display"></div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let evaluationData = null;
+        let categorizedVideos = {
+            flag_monitoring: [],
+            queue_review: [],
+            auto_approve: []
+        };
+        let currentVideo = {
+            flag_monitoring: 0,
+            queue_review: 0,
+            auto_approve: 0
+        };
+
+        // Load evaluation data
+        async function loadEvaluationData() {
+            try {
+                const response = await fetch('evaluation_datasets/large_scale_samples/evaluation_results.json');
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                evaluationData = await response.json();
+                categorizeVideos();
+                updateCategoryCounts();
+                showCategory('flag_monitoring');
+            } catch (error) {
+                console.error('Error loading evaluation data:', error);
+                showError('Failed to load evaluation data. Please ensure the evaluation_results.json file is accessible.');
+            }
+        }
+
+        // Categorize videos by decision
+        function categorizeVideos() {
+            if (!evaluationData || !evaluationData.results) return;
+
+            categorizedVideos = {
+                flag_monitoring: [],
+                queue_review: [],
+                auto_approve: []
+            };
+
+            evaluationData.results.forEach(video => {
+                const decision = video.decision || 'unknown';
+                if (categorizedVideos[decision]) {
+                    categorizedVideos[decision].push(video);
+                }
+            });
+        }
+
+        // Update category counts in tabs
+        function updateCategoryCounts() {
+            document.getElementById('flag-count').textContent = categorizedVideos.flag_monitoring.length;
+            document.getElementById('review-count').textContent = categorizedVideos.queue_review.length;
+            document.getElementById('approve-count').textContent = categorizedVideos.auto_approve.length;
+        }
+
+        // Show specific category
+        function showCategory(category) {
+            // Update tab active state
+            document.querySelectorAll('.tab').forEach(tab => tab.classList.remove('active'));
+            event.target.classList.add('active');
+
+            // Update section active state
+            document.querySelectorAll('.category-section').forEach(section => section.classList.remove('active'));
+            document.getElementById(category).classList.add('active');
+
+            // Load videos for this category
+            loadCategoryVideos(category);
+        }
+
+        // Load videos for a specific category
+        function loadCategoryVideos(category) {
+            const videos = categorizedVideos[category];
+            const navigationDiv = document.getElementById(`${category === 'flag_monitoring' ? 'flag' : category === 'queue_review' ? 'review' : 'approve'}-navigation`);
+            const displayDiv = document.getElementById(`${category === 'flag_monitoring' ? 'flag' : category === 'queue_review' ? 'review' : 'approve'}-display`);
+
+            if (videos.length === 0) {
+                navigationDiv.innerHTML = '';
+                displayDiv.innerHTML = `
+                    <div class="empty-state">
+                        <div class="empty-state-icon">📭</div>
+                        <h3>No videos in this category</h3>
+                        <p>All evaluated videos have been processed and categorized elsewhere.</p>
+                    </div>
+                `;
+                return;
+            }
+
+            // Create navigation items
+            navigationDiv.innerHTML = videos.map((video, index) => `
+                <div class="video-nav-item ${index === currentVideo[category] ? 'active' : ''}" 
+                     onclick="selectVideo('${category}', ${index})">
+                    <div style="font-weight: 600;">${video.filename.replace('.mp4', '')}</div>
+                    <div style="font-size: 0.8rem; color: #6c757d; margin-top: 4px;">
+                        Score: ${(video.overall_score * 100).toFixed(1)}%
+                    </div>
+                </div>
+            `).join('');
+
+            // Show current video
+            selectVideo(category, currentVideo[category]);
+        }
+
+        // Select and display a specific video
+        function selectVideo(category, index) {
+            const videos = categorizedVideos[category];
+            if (!videos || index >= videos.length) return;
+
+            currentVideo[category] = index;
+            const video = videos[index];
+
+            // Update navigation active state
+            const navigationDiv = document.getElementById(`${category === 'flag_monitoring' ? 'flag' : category === 'queue_review' ? 'review' : 'approve'}-navigation`);
+            navigationDiv.querySelectorAll('.video-nav-item').forEach((item, i) => {
+                item.classList.toggle('active', i === index);
+            });
+
+            // Display video details
+            displayVideoDetails(category, video);
+        }
+
+        // Display video details
+        function displayVideoDetails(category, video) {
+            const displayDiv = document.getElementById(`${category === 'flag_monitoring' ? 'flag' : category === 'queue_review' ? 'review' : 'approve'}-display`);
+            
+            const scorePercentage = (video.overall_score * 100).toFixed(1);
+            const scoreClass = video.overall_score >= 0.7 ? 'score-high' : video.overall_score >= 0.4 ? 'score-medium' : 'score-low';
+            const confidenceClass = `confidence-${video.confidence_level}`;
+            const decisionClass = `decision-${video.decision}`;
+
+            displayDiv.innerHTML = `
+                <div class="video-player-section">
+                    <div class="info-label">Video Preview</div>
+                    <video class="video-player" controls preload="metadata">
+                        <source src="evaluation_datasets/large_scale_samples/${video.filename}" type="video/mp4">
+                        Your browser does not support the video tag.
+                    </video>
+                    <div style="margin-top: 15px; text-align: center; color: #6c757d; font-size: 0.9rem;">
+                        ${video.filename} • ${video.source_dataset} • ${video.category}
+                    </div>
+                </div>
+
+                <div class="video-info-section">
+                    <div class="info-card">
+                        <div class="info-label">Prompt</div>
+                        <div class="info-value">"${video.prompt}"</div>
+                    </div>
+
+                    <div class="info-card">
+                        <div class="info-label">Overall Score</div>
+                        <div class="score-display">
+                            <div class="score-circle ${scoreClass}">
+                                ${scorePercentage}%
+                            </div>
+                            <div>
+                                <div style="font-size: 1.2rem; font-weight: 600; margin-bottom: 5px;">
+                                    ${scorePercentage}% Quality Score
+                                </div>
+                                <div style="color: #6c757d;">
+                                    Confidence: ${(video.confidence * 100).toFixed(1)}%
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="info-card">
+                        <div class="info-label">Evaluation Details</div>
+                        <div style="display: grid; gap: 12px;">
+                            <div class="confidence-level ${confidenceClass}">
+                                ${video.confidence_level.toUpperCase()} CONFIDENCE
+                            </div>
+                            <div class="decision-badge ${decisionClass}">
+                                ${video.decision.replace('_', ' ').toUpperCase()}
+                            </div>
+                            <div style="font-size: 0.9rem; color: #6c757d;">
+                                Processing Time: ${video.processing_time.toFixed(3)}s<br>
+                                Evaluated: ${video.evaluation_timestamp}<br>
+                                Review Required: ${video.requires_review ? 'Yes' : 'No'}
+                            </div>
+                        </div>
+                    </div>
+
+                    ${video.dimension_scores && Object.keys(video.dimension_scores).length > 0 ? `
+                    <div class="info-card">
+                        <div class="info-label">Dimension Scores</div>
+                        <div style="display: grid; gap: 8px;">
+                            ${Object.entries(video.dimension_scores).map(([dim, score]) => `
+                                <div style="display: flex; justify-content: space-between; align-items: center;">
+                                    <span style="text-transform: capitalize;">${dim.replace('_', ' ')}</span>
+                                    <span style="font-weight: 600; color: ${score >= 0.7 ? '#28a745' : score >= 0.4 ? '#ffc107' : '#dc3545'}">
+                                        ${(score * 100).toFixed(1)}%
+                                    </span>
+                                </div>
+                            `).join('')}
+                        </div>
+                    </div>
+                    ` : ''}
+                </div>
+            `;
+        }
+
+        // Show error message
+        function showError(message) {
+            document.querySelector('.tab-content').innerHTML = `
+                <div class="error">
+                    <h3>⚠️ Error</h3>
+                    <p>${message}</p>
+                    <button onclick="loadEvaluationData()" style="margin-top: 15px; padding: 10px 20px; background: #dc3545; color: white; border: none; border-radius: 5px; cursor: pointer;">
+                        Retry
+                    </button>
+                </div>
+            `;
+        }
+
+        // Initialize the application
+        document.addEventListener('DOMContentLoaded', function() {
+            loadEvaluationData();
+        });
+
+        // Handle tab clicks correctly
+        function showCategory(category) {
+            // Update tab active state
+            document.querySelectorAll('.tab').forEach(tab => tab.classList.remove('active'));
+            document.querySelectorAll('.tab').forEach(tab => {
+                if ((category === 'flag_monitoring' && tab.textContent.includes('Flag Monitoring')) ||
+                    (category === 'queue_review' && tab.textContent.includes('Queue Review')) ||
+                    (category === 'auto_approve' && tab.textContent.includes('Auto Approve'))) {
+                    tab.classList.add('active');
+                }
+            });
+
+            // Update section active state
+            document.querySelectorAll('.category-section').forEach(section => section.classList.remove('active'));
+            document.getElementById(category).classList.add('active');
+
+            // Load videos for this category
+            loadCategoryVideos(category);
+        }
+    </script>
+</body>
+</html>

@@ -1,0 +1,1314 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Human Review Workflow Dashboard</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            color: #333;
+        }
+
+        .container {
+            max-width: 1600px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        .header {
+            text-align: center;
+            color: white;
+            margin-bottom: 30px;
+        }
+
+        .header h1 {
+            font-size: 2.5rem;
+            margin-bottom: 10px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+        }
+
+        .workflow-stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+
+        .stat-card {
+            background: white;
+            padding: 25px;
+            border-radius: 15px;
+            text-align: center;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+            border-left: 4px solid #667eea;
+        }
+
+        .stat-number {
+            font-size: 2.5rem;
+            font-weight: bold;
+            color: #667eea;
+            margin-bottom: 10px;
+        }
+
+        .stat-label {
+            font-size: 0.9rem;
+            color: #6c757d;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .main-content {
+            display: grid;
+            grid-template-columns: 350px 1fr;
+            gap: 30px;
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+            overflow: hidden;
+            min-height: 800px;
+        }
+
+        .review-queue {
+            background: #f8f9fa;
+            padding: 25px;
+            border-right: 1px solid #e9ecef;
+        }
+
+        .queue-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+
+        .queue-title {
+            font-size: 1.4rem;
+            font-weight: 600;
+            color: #333;
+        }
+
+        .queue-filters {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+
+        .filter-btn {
+            padding: 8px 16px;
+            border: 2px solid #e9ecef;
+            border-radius: 20px;
+            background: white;
+            cursor: pointer;
+            font-size: 0.8rem;
+            font-weight: 600;
+            transition: all 0.3s ease;
+        }
+
+        .filter-btn.active {
+            background: #667eea;
+            color: white;
+            border-color: #667eea;
+        }
+
+        .queue-item {
+            background: white;
+            border-radius: 12px;
+            padding: 15px;
+            margin-bottom: 15px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            border: 2px solid transparent;
+        }
+
+        .queue-item:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+        }
+
+        .queue-item.selected {
+            border-color: #667eea;
+            background: #f0f4ff;
+        }
+
+        .queue-item-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+
+        .queue-item-title {
+            font-weight: 600;
+            font-size: 0.9rem;
+            color: #333;
+        }
+
+        .priority-badge {
+            padding: 4px 8px;
+            border-radius: 12px;
+            font-size: 0.7rem;
+            font-weight: 600;
+            text-transform: uppercase;
+        }
+
+        .priority-high { background: #fee; color: #dc3545; }
+        .priority-medium { background: #fff3cd; color: #856404; }
+        .priority-low { background: #d4edda; color: #155724; }
+
+        .queue-item-meta {
+            font-size: 0.8rem;
+            color: #6c757d;
+            margin-bottom: 8px;
+        }
+
+        .queue-item-score {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-size: 0.8rem;
+        }
+
+        .mini-score-circle {
+            width: 30px;
+            height: 30px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            font-size: 0.7rem;
+            color: white;
+        }
+
+        .review-workspace {
+            padding: 25px;
+            display: flex;
+            flex-direction: column;
+            gap: 25px;
+        }
+
+        .workspace-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding-bottom: 20px;
+            border-bottom: 2px solid #e9ecef;
+        }
+
+        .workspace-title {
+            font-size: 1.6rem;
+            font-weight: 600;
+            color: #333;
+        }
+
+        .workspace-actions {
+            display: flex;
+            gap: 15px;
+        }
+
+        .action-btn {
+            padding: 12px 24px;
+            border: none;
+            border-radius: 25px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-size: 0.9rem;
+        }
+
+        .btn-approve { background: #28a745; color: white; }
+        .btn-reject { background: #dc3545; color: white; }
+        .btn-flag { background: #ffc107; color: #333; }
+        .btn-skip { background: #6c757d; color: white; }
+
+        .action-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 15px rgba(0,0,0,0.3);
+        }
+
+        .review-content {
+            display: grid;
+            grid-template-columns: 1fr 400px;
+            gap: 25px;
+            flex: 1;
+        }
+
+        .video-review-section {
+            background: #f8f9fa;
+            border-radius: 15px;
+            padding: 20px;
+            border: 1px solid #e9ecef;
+        }
+
+        .video-player {
+            width: 100%;
+            border-radius: 10px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+            background: #000;
+            margin-bottom: 20px;
+        }
+
+        .video-controls {
+            display: flex;
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+
+        .control-btn {
+            padding: 8px 16px;
+            border: 1px solid #dee2e6;
+            border-radius: 8px;
+            background: white;
+            cursor: pointer;
+            font-size: 0.8rem;
+            transition: all 0.3s ease;
+        }
+
+        .control-btn:hover {
+            background: #f8f9fa;
+        }
+
+        .ai-evaluation {
+            background: white;
+            padding: 20px;
+            border-radius: 12px;
+            border: 1px solid #e9ecef;
+        }
+
+        .ai-eval-header {
+            display: flex;
+            justify-content: between;
+            align-items: center;
+            margin-bottom: 15px;
+        }
+
+        .ai-score-display {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+
+        .ai-score-circle {
+            width: 60px;
+            height: 60px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            color: white;
+        }
+
+        .dimension-scores {
+            display: grid;
+            gap: 8px;
+        }
+
+        .dimension-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 8px 0;
+            border-bottom: 1px solid #f1f1f1;
+        }
+
+        .dimension-name {
+            font-size: 0.85rem;
+            color: #555;
+            text-transform: capitalize;
+        }
+
+        .dimension-score {
+            font-weight: 600;
+            font-size: 0.85rem;
+        }
+
+        .review-panel {
+            background: #f8f9fa;
+            border-radius: 15px;
+            padding: 20px;
+            border: 1px solid #e9ecef;
+        }
+
+        .review-tabs {
+            display: flex;
+            margin-bottom: 20px;
+            border-bottom: 2px solid #e9ecef;
+        }
+
+        .review-tab {
+            padding: 10px 20px;
+            cursor: pointer;
+            border-bottom: 2px solid transparent;
+            font-weight: 600;
+            color: #6c757d;
+            transition: all 0.3s ease;
+        }
+
+        .review-tab.active {
+            color: #667eea;
+            border-bottom-color: #667eea;
+        }
+
+        .review-tab-content {
+            display: none;
+        }
+
+        .review-tab-content.active {
+            display: block;
+        }
+
+        .human-score-input {
+            margin-bottom: 20px;
+        }
+
+        .score-slider-container {
+            margin: 15px 0;
+        }
+
+        .score-slider {
+            width: 100%;
+            margin: 10px 0;
+        }
+
+        .slider-labels {
+            display: flex;
+            justify-content: space-between;
+            font-size: 0.8rem;
+            color: #6c757d;
+        }
+
+        .comments-section {
+            margin-bottom: 20px;
+        }
+
+        .comment-input {
+            width: 100%;
+            min-height: 100px;
+            padding: 15px;
+            border: 1px solid #dee2e6;
+            border-radius: 8px;
+            resize: vertical;
+            font-family: inherit;
+        }
+
+        .annotation-tools {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 15px;
+        }
+
+        .annotation-btn {
+            padding: 8px 12px;
+            border: 1px solid #dee2e6;
+            border-radius: 6px;
+            background: white;
+            cursor: pointer;
+            font-size: 0.8rem;
+        }
+
+        .annotation-btn.active {
+            background: #667eea;
+            color: white;
+            border-color: #667eea;
+        }
+
+        .tags-section {
+            margin-bottom: 20px;
+        }
+
+        .tag-input {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 10px;
+        }
+
+        .tag-field {
+            flex: 1;
+            padding: 8px 12px;
+            border: 1px solid #dee2e6;
+            border-radius: 6px;
+        }
+
+        .add-tag-btn {
+            padding: 8px 16px;
+            background: #667eea;
+            color: white;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+        }
+
+        .tags-list {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+        }
+
+        .tag {
+            background: #e9ecef;
+            padding: 4px 12px;
+            border-radius: 15px;
+            font-size: 0.8rem;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .tag-remove {
+            cursor: pointer;
+            color: #6c757d;
+            font-weight: bold;
+        }
+
+        .review-history {
+            max-height: 300px;
+            overflow-y: auto;
+        }
+
+        .history-item {
+            background: white;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 10px;
+            border-left: 4px solid #667eea;
+        }
+
+        .history-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 8px;
+        }
+
+        .history-reviewer {
+            font-weight: 600;
+            color: #333;
+        }
+
+        .history-date {
+            font-size: 0.8rem;
+            color: #6c757d;
+        }
+
+        .history-action {
+            font-size: 0.9rem;
+            margin-bottom: 5px;
+        }
+
+        .history-comment {
+            font-size: 0.85rem;
+            color: #555;
+            font-style: italic;
+        }
+
+        .consensus-view {
+            background: white;
+            padding: 20px;
+            border-radius: 12px;
+            border: 1px solid #e9ecef;
+            margin-bottom: 20px;
+        }
+
+        .consensus-header {
+            font-weight: 600;
+            margin-bottom: 15px;
+            color: #333;
+        }
+
+        .reviewer-scores {
+            display: grid;
+            gap: 12px;
+        }
+
+        .reviewer-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 10px 0;
+            border-bottom: 1px solid #f1f1f1;
+        }
+
+        .reviewer-name {
+            font-weight: 500;
+        }
+
+        .reviewer-score {
+            font-weight: 600;
+            padding: 4px 12px;
+            border-radius: 15px;
+            color: white;
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 60px 20px;
+            color: #6c757d;
+        }
+
+        .empty-icon {
+            font-size: 4rem;
+            margin-bottom: 20px;
+            opacity: 0.5;
+        }
+
+        @media (max-width: 1200px) {
+            .main-content {
+                grid-template-columns: 1fr;
+            }
+            
+            .review-content {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        @media (max-width: 768px) {
+            .workflow-stats {
+                grid-template-columns: repeat(2, 1fr);
+            }
+            
+            .workspace-actions {
+                flex-wrap: wrap;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>👥 Human Review Workflow Dashboard</h1>
+            <p>Professional video evaluation review and approval system</p>
+        </div>
+
+        <!-- Workflow Statistics -->
+        <div class="workflow-stats">
+            <div class="stat-card">
+                <div class="stat-number" id="pending-count">0</div>
+                <div class="stat-label">Pending Review</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-number" id="in-review-count">0</div>
+                <div class="stat-label">In Review</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-number" id="completed-count">0</div>
+                <div class="stat-label">Completed</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-number" id="agreement-rate">0%</div>
+                <div class="stat-label">AI Agreement Rate</div>
+            </div>
+        </div>
+
+        <div class="main-content">
+            <!-- Review Queue Sidebar -->
+            <div class="review-queue">
+                <div class="queue-header">
+                    <h3 class="queue-title">Review Queue</h3>
+                    <span class="badge" id="queue-count">0</span>
+                </div>
+
+                <div class="queue-filters">
+                    <button class="filter-btn active" onclick="filterQueue('all')">All</button>
+                    <button class="filter-btn" onclick="filterQueue('high')">High</button>
+                    <button class="filter-btn" onclick="filterQueue('medium')">Medium</button>
+                    <button class="filter-btn" onclick="filterQueue('low')">Low</button>
+                </div>
+
+                <div id="queue-items">
+                    <!-- Queue items will be populated here -->
+                </div>
+            </div>
+
+            <!-- Main Review Workspace -->
+            <div class="review-workspace">
+                <div class="workspace-header">
+                    <h3 class="workspace-title" id="current-video-title">Select a video to review</h3>
+                    <div class="workspace-actions">
+                        <button class="action-btn btn-approve" onclick="approveVideo()" disabled>
+                            ✅ Approve
+                        </button>
+                        <button class="action-btn btn-reject" onclick="rejectVideo()" disabled>
+                            ❌ Reject
+                        </button>
+                        <button class="action-btn btn-flag" onclick="flagVideo()" disabled>
+                            🏷️ Flag
+                        </button>
+                        <button class="action-btn btn-skip" onclick="skipVideo()" disabled>
+                            ⏭️ Skip
+                        </button>
+                    </div>
+                </div>
+
+                <div class="review-content">
+                    <!-- Video and AI Evaluation Section -->
+                    <div class="video-review-section">
+                        <div id="video-container">
+                            <div class="empty-state">
+                                <div class="empty-icon">🎬</div>
+                                <h3>No Video Selected</h3>
+                                <p>Choose a video from the review queue to start reviewing</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Human Review Panel -->
+                    <div class="review-panel">
+                        <div class="review-tabs">
+                            <div class="review-tab active" onclick="switchTab('review')">Review</div>
+                            <div class="review-tab" onclick="switchTab('history')">History</div>
+                            <div class="review-tab" onclick="switchTab('consensus')">Consensus</div>
+                        </div>
+
+                        <!-- Review Tab -->
+                        <div id="review-tab" class="review-tab-content active">
+                            <div class="human-score-input">
+                                <h4>Human Review Score</h4>
+                                <div class="score-slider-container">
+                                    <input type="range" id="human-score" class="score-slider" 
+                                           min="0" max="100" value="50" 
+                                           oninput="updateHumanScore(this.value)">
+                                    <div class="slider-labels">
+                                        <span>Poor (0%)</span>
+                                        <span id="human-score-display">50%</span>
+                                        <span>Excellent (100%)</span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="comments-section">
+                                <h4>Review Comments</h4>
+                                <textarea id="review-comments" class="comment-input" 
+                                         placeholder="Add your detailed review comments here..."></textarea>
+                            </div>
+
+                            <div class="tags-section">
+                                <h4>Review Tags</h4>
+                                <div class="tag-input">
+                                    <input type="text" id="tag-field" class="tag-field" 
+                                           placeholder="Add tag (e.g., 'poor lighting', 'excellent motion')">
+                                    <button class="add-tag-btn" onclick="addTag()">Add</button>
+                                </div>
+                                <div id="tags-list" class="tags-list">
+                                    <!-- Tags will be added here -->
+                                </div>
+                            </div>
+
+                            <div class="annotation-tools">
+                                <h4>Quick Annotations</h4>
+                                <div style="margin-top: 10px;">
+                                    <button class="annotation-btn" onclick="toggleAnnotation('quality-issues')">
+                                        Quality Issues
+                                    </button>
+                                    <button class="annotation-btn" onclick="toggleAnnotation('text-mismatch')">
+                                        Text Mismatch
+                                    </button>
+                                    <button class="annotation-btn" onclick="toggleAnnotation('motion-artifacts')">
+                                        Motion Artifacts
+                                    </button>
+                                    <button class="annotation-btn" onclick="toggleAnnotation('creative-good')">
+                                        Creative Excellence
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- History Tab -->
+                        <div id="history-tab" class="review-tab-content">
+                            <div id="review-history" class="review-history">
+                                <div class="empty-state">
+                                    <div class="empty-icon">📝</div>
+                                    <h4>No Review History</h4>
+                                    <p>This video hasn't been reviewed yet</p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Consensus Tab -->
+                        <div id="consensus-tab" class="review-tab-content">
+                            <div id="consensus-view">
+                                <div class="empty-state">
+                                    <div class="empty-icon">🤝</div>
+                                    <h4>No Consensus Data</h4>
+                                    <p>Multiple reviews needed for consensus view</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let evaluationData = null;
+        let reviewQueue = [];
+        let currentVideoIndex = -1;
+        let currentFilter = 'all';
+        let reviewTags = [];
+        let activeAnnotations = [];
+
+        // Initialize the dashboard
+        async function initializeDashboard() {
+            try {
+                await loadEvaluationData();
+                buildReviewQueue();
+                await loadStatistics();
+                renderQueue();
+            } catch (error) {
+                console.error('Failed to initialize dashboard:', error);
+                showError('Failed to initialize dashboard. Please ensure the API server is running.');
+            }
+        }
+
+        // Load statistics from API
+        async function loadStatistics() {
+            try {
+                const response = await fetch('/api/statistics');
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                const stats = await response.json();
+                updateStatisticsDisplay(stats);
+            } catch (error) {
+                console.error('Error loading statistics:', error);
+            }
+        }
+
+        // Update statistics display
+        function updateStatisticsDisplay(stats) {
+            const statusDist = stats.status_distribution || {};
+            const pending = statusDist.pending || 0;
+            const inReview = statusDist['in_review'] || 0;
+            const completed = statusDist.completed || 0;
+            const agreementRate = Math.round((stats.ai_human_agreement_rate || 0) * 100);
+
+            document.getElementById('pending-count').textContent = pending;
+            document.getElementById('in-review-count').textContent = inReview;
+            document.getElementById('completed-count').textContent = completed;
+            document.getElementById('agreement-rate').textContent = `${agreementRate}%`;
+            document.getElementById('queue-count').textContent = pending + inReview;
+        }
+
+        // Load evaluation data from API
+        async function loadEvaluationData() {
+            try {
+                const response = await fetch('/api/review-queue');
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                const queueData = await response.json();
+                
+                // Convert API format to expected format
+                evaluationData = {
+                    metadata: {
+                        total_videos: queueData.length,
+                        evaluation_date: new Date().toISOString()
+                    },
+                    results: queueData.map(item => ({
+                        ...item.original_evaluation,
+                        video_id: item.video_id,
+                        reviewStatus: item.status,
+                        priority: item.priority,
+                        assigned_reviewer: item.assigned_reviewer,
+                        review_count: item.review_count,
+                        consensus_score: item.consensus_score,
+                        final_decision: item.final_decision
+                    }))
+                };
+            } catch (error) {
+                console.error('Error loading evaluation data:', error);
+                throw error;
+            }
+        }
+
+        // Build review queue from evaluation data
+        function buildReviewQueue() {
+            if (!evaluationData || !evaluationData.results) return;
+
+            reviewQueue = evaluationData.results
+                .filter(video => video.requires_review || video.decision === 'queue_review')
+                .map((video, index) => ({
+                    ...video,
+                    queueId: index,
+                    reviewStatus: 'pending',
+                    priority: calculatePriority(video),
+                    humanScore: null,
+                    humanComments: '',
+                    reviewTags: [],
+                    reviewHistory: [],
+                    reviewer: null,
+                    reviewStartTime: null
+                }))
+                .sort((a, b) => getPriorityWeight(b.priority) - getPriorityWeight(a.priority));
+        }
+
+        // Calculate review priority
+        function calculatePriority(video) {
+            const score = video.overall_score;
+            const confidence = video.confidence;
+            
+            if (score < 0.3 || confidence < 0.5) return 'high';
+            if (score < 0.6 || confidence < 0.7) return 'medium';
+            return 'low';
+        }
+
+        function getPriorityWeight(priority) {
+            const weights = { 'high': 3, 'medium': 2, 'low': 1 };
+            return weights[priority] || 0;
+        }
+
+
+
+        // Filter queue
+        function filterQueue(filter) {
+            currentFilter = filter;
+            
+            // Update filter buttons
+            document.querySelectorAll('.filter-btn').forEach(btn => btn.classList.remove('active'));
+            event.target.classList.add('active');
+            
+            renderQueue();
+        }
+
+        // Render queue items
+        function renderQueue() {
+            const queueContainer = document.getElementById('queue-items');
+            let filteredQueue = reviewQueue;
+
+            if (currentFilter !== 'all') {
+                filteredQueue = reviewQueue.filter(video => video.priority === currentFilter);
+            }
+
+            queueContainer.innerHTML = filteredQueue.map((video, index) => {
+                const globalIndex = reviewQueue.findIndex(v => v.queueId === video.queueId);
+                return `
+                    <div class="queue-item ${currentVideoIndex === globalIndex ? 'selected' : ''}" 
+                         onclick="selectVideoForReview(${globalIndex})">
+                        <div class="queue-item-header">
+                            <div class="queue-item-title">${video.filename.replace('.mp4', '')}</div>
+                            <div class="priority-badge priority-${video.priority}">${video.priority}</div>
+                        </div>
+                        <div class="queue-item-meta">
+                            ${video.source_dataset} • ${video.category}
+                        </div>
+                        <div class="queue-item-score">
+                            <div class="mini-score-circle ${getScoreClass(video.overall_score)}">
+                                ${Math.round(video.overall_score * 100)}%
+                            </div>
+                            <div>
+                                <div style="font-size: 0.75rem;">AI: ${(video.confidence * 100).toFixed(0)}% conf</div>
+                                <div style="font-size: 0.75rem;">${video.reviewStatus}</div>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        // Select video for review
+        function selectVideoForReview(index) {
+            currentVideoIndex = index;
+            const video = reviewQueue[index];
+            
+            // Update video status
+            if (video.reviewStatus === 'pending') {
+                video.reviewStatus = 'in-review';
+                video.reviewStartTime = new Date().toISOString();
+                video.reviewer = 'Current User'; // In real app, get from auth
+            }
+
+            // Update UI
+            renderQueue();
+            renderVideoForReview(video);
+            enableReviewActions();
+            updateStatistics();
+        }
+
+        // Render video for review
+        function renderVideoForReview(video) {
+            document.getElementById('current-video-title').textContent = video.filename;
+
+            const videoContainer = document.getElementById('video-container');
+            videoContainer.innerHTML = `
+                <video class="video-player" controls preload="metadata">
+                    <source src="evaluation_datasets/large_scale_samples/${video.filename}" type="video/mp4">
+                    Your browser does not support the video tag.
+                </video>
+
+                <div class="video-controls">
+                    <button class="control-btn" onclick="seekVideo(-10)">⏪ -10s</button>
+                    <button class="control-btn" onclick="togglePlayPause()">⏯️ Play/Pause</button>
+                    <button class="control-btn" onclick="seekVideo(10)">⏩ +10s</button>
+                    <button class="control-btn" onclick="setPlaybackSpeed(0.5)">0.5x</button>
+                    <button class="control-btn" onclick="setPlaybackSpeed(1)">1x</button>
+                    <button class="control-btn" onclick="setPlaybackSpeed(2)">2x</button>
+                </div>
+
+                <div class="ai-evaluation">
+                    <div class="ai-eval-header">
+                        <h4>AI Evaluation Results</h4>
+                    </div>
+                    <div class="ai-score-display">
+                        <div class="ai-score-circle ${getScoreClass(video.overall_score)}">
+                            ${Math.round(video.overall_score * 100)}%
+                        </div>
+                        <div>
+                            <div style="margin-bottom: 5px;">
+                                <strong>Overall Score:</strong> ${(video.overall_score * 100).toFixed(1)}%
+                            </div>
+                            <div style="margin-bottom: 5px;">
+                                <strong>Confidence:</strong> ${(video.confidence * 100).toFixed(1)}%
+                            </div>
+                            <div style="margin-bottom: 5px;">
+                                <strong>Decision:</strong> ${video.decision.replace('_', ' ').toUpperCase()}
+                            </div>
+                        </div>
+                    </div>
+                    <div style="margin-bottom: 15px;">
+                        <strong>Prompt:</strong> "${video.prompt}"
+                    </div>
+                    ${renderDimensionScores(video.dimension_scores)}
+                </div>
+            `;
+
+            // Load existing review data if any
+            if (video.humanScore !== null) {
+                document.getElementById('human-score').value = video.humanScore;
+                updateHumanScore(video.humanScore);
+            }
+            document.getElementById('review-comments').value = video.humanComments || '';
+            reviewTags = [...(video.reviewTags || [])];
+            renderTags();
+        }
+
+        // Render dimension scores
+        function renderDimensionScores(dimensionScores) {
+            if (!dimensionScores || Object.keys(dimensionScores).length === 0) {
+                return '<div style="color: #6c757d; font-style: italic;">No dimension scores available</div>';
+            }
+
+            return `
+                <div class="dimension-scores">
+                    <h5 style="margin-bottom: 10px;">Dimension Breakdown:</h5>
+                    ${Object.entries(dimensionScores).map(([dim, score]) => `
+                        <div class="dimension-row">
+                            <span class="dimension-name">${dim.replace('_', ' ')}</span>
+                            <span class="dimension-score" style="color: ${getScoreColor(score)}">
+                                ${(score * 100).toFixed(1)}%
+                            </span>
+                        </div>
+                    `).join('')}
+                </div>
+            `;
+        }
+
+        // Helper functions
+        function getScoreClass(score) {
+            if (score >= 0.7) return 'score-high';
+            if (score >= 0.4) return 'score-medium';
+            return 'score-low';
+        }
+
+        function getScoreColor(score) {
+            if (score >= 0.7) return '#28a745';
+            if (score >= 0.4) return '#ffc107';
+            return '#dc3545';
+        }
+
+        // Video control functions
+        function togglePlayPause() {
+            const video = document.querySelector('.video-player');
+            if (video) {
+                if (video.paused) video.play();
+                else video.pause();
+            }
+        }
+
+        function seekVideo(seconds) {
+            const video = document.querySelector('.video-player');
+            if (video) {
+                video.currentTime += seconds;
+            }
+        }
+
+        function setPlaybackSpeed(speed) {
+            const video = document.querySelector('.video-player');
+            if (video) {
+                video.playbackRate = speed;
+            }
+        }
+
+        // Review functions
+        function updateHumanScore(value) {
+            document.getElementById('human-score-display').textContent = `${value}%`;
+            if (currentVideoIndex >= 0) {
+                reviewQueue[currentVideoIndex].humanScore = parseInt(value);
+            }
+        }
+
+        function addTag() {
+            const tagField = document.getElementById('tag-field');
+            const tag = tagField.value.trim();
+            
+            if (tag && !reviewTags.includes(tag)) {
+                reviewTags.push(tag);
+                renderTags();
+                tagField.value = '';
+                
+                if (currentVideoIndex >= 0) {
+                    reviewQueue[currentVideoIndex].reviewTags = [...reviewTags];
+                }
+            }
+        }
+
+        function removeTag(tag) {
+            reviewTags = reviewTags.filter(t => t !== tag);
+            renderTags();
+            
+            if (currentVideoIndex >= 0) {
+                reviewQueue[currentVideoIndex].reviewTags = [...reviewTags];
+            }
+        }
+
+        function renderTags() {
+            const tagsList = document.getElementById('tags-list');
+            tagsList.innerHTML = reviewTags.map(tag => `
+                <div class="tag">
+                    ${tag}
+                    <span class="tag-remove" onclick="removeTag('${tag}')">×</span>
+                </div>
+            `).join('');
+        }
+
+        function toggleAnnotation(annotation) {
+            const btn = event.target;
+            btn.classList.toggle('active');
+            
+            if (activeAnnotations.includes(annotation)) {
+                activeAnnotations = activeAnnotations.filter(a => a !== annotation);
+            } else {
+                activeAnnotations.push(annotation);
+            }
+        }
+
+        // Review action functions
+        function enableReviewActions() {
+            document.querySelectorAll('.action-btn').forEach(btn => {
+                btn.disabled = false;
+            });
+        }
+
+        function approveVideo() {
+            if (currentVideoIndex >= 0) {
+                completeReview('approved');
+            }
+        }
+
+        function rejectVideo() {
+            if (currentVideoIndex >= 0) {
+                completeReview('rejected');
+            }
+        }
+
+        function flagVideo() {
+            if (currentVideoIndex >= 0) {
+                completeReview('flagged');
+            }
+        }
+
+        function skipVideo() {
+            if (currentVideoIndex >= 0) {
+                reviewQueue[currentVideoIndex].reviewStatus = 'pending';
+                reviewQueue[currentVideoIndex].reviewer = null;
+                reviewQueue[currentVideoIndex].reviewStartTime = null;
+                selectNextVideo();
+            }
+        }
+
+        async function completeReview(decision) {
+            const video = reviewQueue[currentVideoIndex];
+            const comments = document.getElementById('review-comments').value;
+            const score = video.humanScore;
+            
+            try {
+                // First assign reviewer if not already assigned
+                if (!video.assigned_reviewer) {
+                    await assignReviewer(video.video_id);
+                }
+                
+                // Submit review to API
+                const response = await fetch(`/api/review-item/${video.video_id}/review`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        decision: decision,
+                        score: score,
+                        comments: comments,
+                        tags: reviewTags
+                    })
+                });
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                
+                // Update local state
+                video.reviewStatus = 'completed';
+                video.humanDecision = decision;
+                video.humanComments = comments;
+                video.reviewCompletedTime = new Date().toISOString();
+                
+                // Add to review history
+                video.reviewHistory.push({
+                    reviewer: 'Current User',
+                    decision: decision,
+                    score: score,
+                    comments: comments,
+                    tags: [...reviewTags],
+                    timestamp: new Date().toISOString()
+                });
+                
+                await loadStatistics();
+                selectNextVideo();
+                
+            } catch (error) {
+                console.error('Error submitting review:', error);
+                showError('Failed to submit review. Please try again.');
+            }
+        }
+
+        // Assign reviewer to video
+        async function assignReviewer(videoId) {
+            try {
+                const response = await fetch(`/api/review-item/${videoId}/assign`, {
+                    method: 'POST'
+                });
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                
+                return true;
+            } catch (error) {
+                console.error('Error assigning reviewer:', error);
+                return false;
+            }
+        }
+
+        function selectNextVideo() {
+            const nextPending = reviewQueue.findIndex((video, index) => 
+                index > currentVideoIndex && video.reviewStatus === 'pending'
+            );
+            
+            if (nextPending >= 0) {
+                selectVideoForReview(nextPending);
+            } else {
+                // No more pending videos in current filter
+                currentVideoIndex = -1;
+                document.getElementById('video-container').innerHTML = `
+                    <div class="empty-state">
+                        <div class="empty-icon">🎉</div>
+                        <h3>All videos reviewed!</h3>
+                        <p>Great job! All videos in the current filter have been reviewed.</p>
+                    </div>
+                `;
+                document.querySelectorAll('.action-btn').forEach(btn => btn.disabled = true);
+            }
+            
+            renderQueue();
+        }
+
+        // Tab switching
+        function switchTab(tabName) {
+            document.querySelectorAll('.review-tab').forEach(tab => tab.classList.remove('active'));
+            document.querySelectorAll('.review-tab-content').forEach(content => content.classList.remove('active'));
+            
+            event.target.classList.add('active');
+            document.getElementById(`${tabName}-tab`).classList.add('active');
+            
+            if (tabName === 'history') {
+                renderReviewHistory();
+            } else if (tabName === 'consensus') {
+                renderConsensusView();
+            }
+        }
+
+        function renderReviewHistory() {
+            const historyContainer = document.getElementById('review-history');
+            
+            if (currentVideoIndex < 0 || !reviewQueue[currentVideoIndex].reviewHistory.length) {
+                historyContainer.innerHTML = `
+                    <div class="empty-state">
+                        <div class="empty-icon">📝</div>
+                        <h4>No Review History</h4>
+                        <p>This video hasn't been reviewed yet</p>
+                    </div>
+                `;
+                return;
+            }
+            
+            const history = reviewQueue[currentVideoIndex].reviewHistory;
+            historyContainer.innerHTML = history.map(review => `
+                <div class="history-item">
+                    <div class="history-header">
+                        <span class="history-reviewer">${review.reviewer}</span>
+                        <span class="history-date">${new Date(review.timestamp).toLocaleDateString()}</span>
+                    </div>
+                    <div class="history-action">
+                        <strong>${review.decision.toUpperCase()}</strong> 
+                        ${review.score ? `(Score: ${review.score}%)` : ''}
+                    </div>
+                    ${review.comments ? `<div class="history-comment">"${review.comments}"</div>` : ''}
+                    ${review.tags.length ? `<div style="margin-top: 8px;">${review.tags.map(tag => `<span class="tag">${tag}</span>`).join(' ')}</div>` : ''}
+                </div>
+            `).join('');
+        }
+
+        function renderConsensusView() {
+            const consensusContainer = document.getElementById('consensus-view');
+            
+            // Placeholder consensus view
+            consensusContainer.innerHTML = `
+                <div class="consensus-view">
+                    <div class="consensus-header">Multi-Reviewer Consensus</div>
+                    <div class="reviewer-scores">
+                        <div class="reviewer-row">
+                            <span class="reviewer-name">AI System</span>
+                            <span class="reviewer-score score-medium">${currentVideoIndex >= 0 ? Math.round(reviewQueue[currentVideoIndex].overall_score * 100) : 0}%</span>
+                        </div>
+                        ${currentVideoIndex >= 0 && reviewQueue[currentVideoIndex].humanScore ? `
+                        <div class="reviewer-row">
+                            <span class="reviewer-name">Human Reviewer</span>
+                            <span class="reviewer-score score-high">${reviewQueue[currentVideoIndex].humanScore}%</span>
+                        </div>
+                        ` : ''}
+                    </div>
+                </div>
+            `;
+        }
+
+        // Initialize dashboard on load
+        document.addEventListener('DOMContentLoaded', initializeDashboard);
+
+        // Handle Enter key in tag input
+        document.addEventListener('keypress', function(e) {
+            if (e.target.id === 'tag-field' && e.key === 'Enter') {
+                addTag();
+            }
+        });
+    </script>
+</body>
+</html>
