@@ -1,0 +1,50 @@
+FROM python:3.11-slim
+
+# Set working directory
+WORKDIR /app
+
+# Install system dependencies for headless OpenCV with video codec support
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    libpq-dev \
+    gcc \
+    g++ \
+    libglib2.0-0 \
+    libsm6 \
+    libxext6 \
+    libxrender-dev \
+    libgomp1 \
+    libgcc-s1 \
+    ffmpeg \
+    libavcodec-dev \
+    libavformat-dev \
+    libavutil-dev \
+    libswscale-dev \
+    python3-dev \
+    pkg-config \
+    libgl1-mesa-dev \
+    && rm -rf /var/lib/apt/lists/*
+
+# Copy requirements
+COPY requirements.txt /app/
+RUN pip install --no-cache-dir -r requirements.txt
+
+# Install production dependencies
+RUN pip install asyncpg
+
+# Fix NumPy compatibility and install correct headless OpenCV for Docker
+RUN pip install --force-reinstall "numpy<2" opencv-python-headless==4.8.0.76
+
+# Copy application code
+COPY visionflow/ /app/visionflow/
+COPY generated/ /app/generated/
+COPY test_dataset_evaluation.py /app/test_dataset_evaluation.py
+
+# Create necessary directories
+RUN mkdir -p /app/logs
+
+# Set environment variables
+ENV PYTHONPATH=/app
+ENV PYTHONUNBUFFERED=1
+
+# Default command
+CMD ["python", "/app/test_dataset_evaluation.py"]

@@ -1,0 +1,47 @@
+version: '3.8'
+
+services:
+  # PostgreSQL Database
+  postgres:
+    image: postgres:16-alpine
+    container_name: visionflow-postgres-simple
+    environment:
+      POSTGRES_DB: visionflow
+      POSTGRES_USER: visionflow_user
+      POSTGRES_PASSWORD: visionflow_pass
+    ports:
+      - "5434:5432"
+    volumes:
+      - postgres_simple_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U visionflow_user -d visionflow"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Simple evaluation service
+  evaluation:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.evaluation
+    container_name: visionflow-evaluation
+    environment:
+      POSTGRES_HOST: postgres
+      POSTGRES_DB: visionflow
+      POSTGRES_USER: visionflow_user
+      POSTGRES_PASSWORD: visionflow_pass
+      PYTHONPATH: /app
+    volumes:
+      - ./generated:/app/generated
+      - ./logs:/app/logs
+    depends_on:
+      postgres:
+        condition: service_healthy
+    command: ["python", "/app/test_dataset_evaluation.py"]
+
+volumes:
+  postgres_simple_data:
+
+networks:
+  default:
+    name: visionflow-simple

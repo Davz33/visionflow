@@ -17,6 +17,8 @@ from diffusers.utils import export_to_video
 
 from ...shared.models import VideoGenerationRequest, VideoQuality
 from ...shared.monitoring import get_logger
+from .resource_config import get_resource_limits, ResourceLimits
+from .video_metadata_tracker import metadata_tracker
 
 logger = get_logger(__name__)
 
@@ -50,13 +52,73 @@ WAN_MODELS = {
 class WanVideoGenerationService:
     """Real WAN 2.1 Video Generation Service."""
     
-    def __init__(self):
+    def __init__(self, resource_limits: Optional[ResourceLimits] = None):
+        self.resource_limits = resource_limits or get_resource_limits()
         self.device = self._detect_device()
         self.current_model = None
         self.pipeline = None
         self.model_config = None
+        self.generation_count = 0
         self._authenticate_huggingface()
+        self._configure_resource_limits()
         logger.info(f"WAN Video Generation Service initialized on device: {self.device}")
+        logger.info(f"Resource limits: GPU memory fraction={self.resource_limits.gpu_memory_fraction}, Max RAM={self.resource_limits.max_system_ram_gb}GB")
+    
+    def _configure_resource_limits(self):
+        """Configure resource limits to prevent system crashes."""
+        if self.device == "cuda" and torch.cuda.is_available():
+            # Set GPU memory fraction limit
+            torch.cuda.set_per_process_memory_fraction(self.resource_limits.gpu_memory_fraction)
+            logger.info(f"🔒 GPU memory limited to {self.resource_limits.gpu_memory_fraction * 100:.1f}% of available VRAM")
+            
+            # Get total GPU memory and set hard limit
+            total_gpu_memory = torch.cuda.get_device_properties(0).total_memory / (1024**3)
+            max_gpu_memory_gb = total_gpu_memory * self.resource_limits.gpu_memory_fraction
+            logger.info(f"📊 Total GPU memory: {total_gpu_memory:.1f}GB, Max allowed: {max_gpu_memory_gb:.1f}GB")
+        elif self.device == "mps":
+            # Apple Silicon MPS uses unified memory - need to be more conservative
+            logger.info(f"🍎 Apple Silicon MPS detected - using conservative memory limits")
+            logger.info(f"🔒 MPS memory fraction: {self.resource_limits.mps_memory_fraction * 100:.1f}%")
+            
+            # On Apple Silicon, GPU and system RAM are unified, so we need to be extra careful
+            total_system_memory = psutil.virtual_memory().total / (1024**3)
+            logger.info(f"📊 Unified memory: {total_system_memory:.1f}GB (shared between CPU and GPU)")
+    
+    def _check_system_resources(self) -> bool:
+        """Check if system has enough resources before processing."""
+        memory_info = self._get_memory_info()
+        
+        # Check system RAM
+        if memory_info["system_ram_percent"] > self.resource_limits.system_ram_warning_threshold:
+            logger.warning(f"⚠️ System RAM usage high: {memory_info['system_ram_percent']:.1f}%")
+            return False
+        
+        # Check GPU memory if using CUDA
+        if self.device == "cuda" and torch.cuda.is_available():
+            gpu_memory_used_gb = memory_info.get("gpu_memory_allocated_gb", 0)
+            total_gpu_memory = torch.cuda.get_device_properties(0).total_memory / (1024**3)
+            gpu_memory_percent = (gpu_memory_used_gb / total_gpu_memory) * 100
+            
+            if gpu_memory_percent > (self.resource_limits.gpu_memory_fraction * 100):
+                logger.warning(f"⚠️ GPU memory usage high: {gpu_memory_percent:.1f}%")
+                return False
+        
+        return True
+    
+    def _validate_request(self, request: VideoGenerationRequest) -> bool:
+        """Validate video generation request against resource limits."""
+        # Check video duration
+        if request.duration > self.resource_limits.max_video_duration:
+            logger.warning(f"⚠️ Video duration {request.duration}s exceeds limit {self.resource_limits.max_video_duration}s")
+            return False
+        
+        # Check resolution
+        width, height = map(int, request.resolution.split('x'))
+        if width * height > self.resource_limits.max_resolution_pixels:
+            logger.warning(f"⚠️ Resolution {width}x{height} exceeds pixel limit {self.resource_limits.max_resolution_pixels}")
+            return False
+        
+        return True
     
     def _authenticate_huggingface(self):
         """Authenticate with HuggingFace Hub."""
@@ -99,6 +161,13 @@ class WanVideoGenerationService:
                 "gpu_memory_reserved_gb": torch.cuda.memory_reserved() / (1024**3),
                 "gpu_memory_percent": (torch.cuda.memory_allocated() / torch.cuda.max_memory_allocated()) * 100
             })
+        elif self.device == "mps":
+            # For MPS, we primarily monitor system RAM since it's unified memory
+            memory_info.update({
+                "device_type": "mps",
+                "unified_memory": True,
+                "mps_memory_pressure": memory_info["system_ram_percent"]  # Unified memory pressure
+            })
         
         return memory_info
     
@@ -119,8 +188,12 @@ class WanVideoGenerationService:
             logger.info(f"Model {model_key} already loaded")
             return
         
-        # Clear previous model
-        if self.pipeline is not None:
+        # Check system resources before loading
+        if not self._check_system_resources():
+            raise RuntimeError("Insufficient system resources to load model")
+        
+        # Clear previous model if model swapping is enabled
+        if self.pipeline is not None and self.resource_limits.enable_model_swapping:
             logger.info("Clearing previous model from memory")
             del self.pipeline
             self.pipeline = None
@@ -189,11 +262,50 @@ class WanVideoGenerationService:
             logger.error(f"❌ Failed to load model {self.model_config.model_id}: {e}")
             raise
     
+    def _force_cleanup(self):
+        """Force aggressive memory cleanup."""
+        if self.resource_limits.enable_aggressive_cleanup:
+            logger.info("🧹 Performing aggressive memory cleanup")
+            gc.collect()
+            
+            if self.device == "cuda" and torch.cuda.is_available():
+                torch.cuda.empty_cache()
+                torch.cuda.synchronize()
+            elif self.device == "mps":
+                # For MPS, we rely on system-level memory management
+                # Force garbage collection is more important for unified memory
+                logger.info("🍎 MPS memory cleanup - relying on unified memory management")
+                import threading
+                import time
+                
+                # Give the system a moment to release memory
+                time.sleep(0.1)
+            
+            # Force Python garbage collection multiple times
+            for _ in range(3):
+                gc.collect()
+    
     async def generate_video(self, request: VideoGenerationRequest) -> Dict[str, Any]:
         """Generate video using WAN 2.1 models."""
         logger.info(f"🎬 Starting video generation: '{request.prompt[:50]}...'")
         
         try:
+            # Validate request against resource limits
+            if not self._validate_request(request):
+                return {
+                    "status": "failed",
+                    "error": "Request exceeds resource limits",
+                    "memory_usage": self._get_memory_info()
+                }
+            
+            # Check system resources before starting
+            if not self._check_system_resources():
+                return {
+                    "status": "failed",
+                    "error": "Insufficient system resources",
+                    "memory_usage": self._get_memory_info()
+                }
+            
             # Select and load appropriate model
             model_key = self._select_model(request.quality, request.resolution)
             await self._load_model(model_key)
@@ -230,12 +342,8 @@ class WanVideoGenerationService:
             output_path = self._create_output_path()
             export_to_video(video_frames, str(output_path), fps=request.fps)
             
-            # Get final memory info
-            final_memory = self._get_memory_info()
-            
-            logger.info(f"✅ Video generation completed: {output_path}")
-            
-            return {
+            # Create generation result for metadata tracking
+            generation_result = {
                 "status": "completed",
                 "video_path": str(output_path),
                 "model_used": self.model_config.model_id,
@@ -243,8 +351,44 @@ class WanVideoGenerationService:
                 "duration": request.duration,
                 "fps": request.fps,
                 "num_frames": num_frames,
-                "memory_usage": final_memory
+                "memory_usage": final_memory,
+                "generation_count": self.generation_count
             }
+            
+            # Track metadata for this generation
+            try:
+                model_info = {
+                    "model_name": self.model_config.model_id,
+                    "model_version": None,  # Could be extracted from model config
+                    "device": self.device
+                }
+                
+                generation_id = await metadata_tracker.track_video_generation(
+                    video_path=str(output_path),
+                    request=request,
+                    generation_result=generation_result,
+                    generation_time=generation_time,
+                    model_info=model_info
+                )
+                
+                generation_result["generation_id"] = generation_id
+                logger.info(f"📋 Metadata tracked with ID: {generation_id}")
+                
+            except Exception as e:
+                logger.warning(f"⚠️ Failed to track metadata: {e}")
+                # Continue without metadata - don't fail the generation
+            
+            # Increment generation count and cleanup if needed
+            self.generation_count += 1
+            if self.generation_count % self.resource_limits.cleanup_interval_generations == 0:
+                self._force_cleanup()
+            
+            # Get final memory info
+            final_memory = self._get_memory_info()
+            
+            logger.info(f"✅ Video generation completed: {output_path}")
+            
+            return generation_result
             
         except Exception as e:
             logger.error(f"❌ Video generation failed: {e}")
@@ -280,7 +424,15 @@ class WanVideoGenerationService:
             "model_config": self.model_config.__dict__ if self.model_config else None,
             "device": self.device,
             "memory_usage": self._get_memory_info(),
-            "available_models": list(WAN_MODELS.keys())
+            "available_models": list(WAN_MODELS.keys()),
+            "resource_limits": {
+                "gpu_memory_fraction": self.resource_limits.gpu_memory_fraction,
+                "max_system_ram_gb": self.resource_limits.max_system_ram_gb,
+                "max_video_duration": self.resource_limits.max_video_duration,
+                "max_resolution_pixels": self.resource_limits.max_resolution_pixels,
+                "enable_aggressive_cleanup": self.resource_limits.enable_aggressive_cleanup
+            },
+            "generation_count": self.generation_count
         }
     
     async def cleanup(self):
@@ -298,5 +450,5 @@ class WanVideoGenerationService:
             
             logger.info("✅ Cleanup completed")
 
-# Global service instance
+# Global service instance with resource limits from configuration
 wan_service = WanVideoGenerationService()

@@ -1,0 +1,45 @@
+# Production dependencies for VisionFlow evaluation system
+# Includes all evaluation models and PostgreSQL support
+# Install with: pip install -r requirements_production.txt
+
+# Base requirements
+-r requirements.txt
+
+# Production Database
+asyncpg>=0.29.0
+psycopg2-binary>=2.9.7
+
+# Evaluation Models
+lpips>=0.1.4
+clip-by-openai>=1.0.1
+transformers>=4.35.0
+torch>=2.1.0
+torchvision>=0.16.0
+torchaudio>=2.1.0
+
+# Vision Models
+timm>=0.9.10
+huggingface-hub>=0.17.0
+
+# Scientific Computing
+numpy>=1.24.0
+scipy>=1.11.0
+scikit-image>=0.21.0
+matplotlib>=3.7.0
+
+# Video Processing
+opencv-python>=4.8.0
+imageio>=2.31.0
+imageio-ffmpeg>=0.4.9
+
+# Additional ML utilities
+einops>=0.7.0
+safetensors>=0.4.0
+
+# Performance monitoring
+psutil>=5.9.0
+memory-profiler>=0.61.0
+
+# Cloud deployment
+gunicorn>=21.2.0
+uvloop>=0.19.0

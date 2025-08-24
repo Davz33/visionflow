@@ -1,0 +1,61 @@
+{
+  "dataset_name": "WAN Video Evaluation Test Dataset",
+  "created_at": "2025-08-24T19:35:51.869315",
+  "total_videos": 4,
+  "metadata_coverage": 4,
+  "description": "Test dataset for evaluating WAN video generation autorater system",
+  "videos": [
+    {
+      "filename": "test_video_01.mp4",
+      "path": "/Users/dav/coding/wan-open-eval/visionflow/generated/test_dataset/test_video_01.mp4",
+      "prompt": "A beautiful sunset over a calm ocean with gentle waves, cinematic lighting, peaceful atmosphere",
+      "quality": "high",
+      "duration": 3.0,
+      "tags": [
+        "nature",
+        "sunset",
+        "ocean",
+        "cinematic"
+      ]
+    },
+    {
+      "filename": "test_video_02.mp4",
+      "path": "/Users/dav/coding/wan-open-eval/visionflow/generated/test_dataset/test_video_02.mp4",
+      "prompt": "A cat walking through a garden filled with colorful flowers, soft natural lighting",
+      "quality": "medium",
+      "duration": 5.0,
+      "tags": [
+        "animals",
+        "cat",
+        "garden",
+        "flowers"
+      ]
+    },
+    {
+      "filename": "test_video_03.mp4",
+      "path": "/Users/dav/coding/wan-open-eval/visionflow/generated/test_dataset/test_video_03.mp4",
+      "prompt": "Rain falling on a window with blurred city lights in the background, moody atmosphere",
+      "quality": "high",
+      "duration": 4.0,
+      "tags": [
+        "rain",
+        "urban",
+        "moody",
+        "atmospheric"
+      ]
+    },
+    {
+      "filename": "test_video_04.mp4",
+      "path": "/Users/dav/coding/wan-open-eval/visionflow/generated/test_dataset/test_video_04.mp4",
+      "prompt": "A field of wheat swaying in the wind under a blue sky with white clouds",
+      "quality": "medium",
+      "duration": 6.0,
+      "tags": [
+        "nature",
+        "wheat",
+        "field",
+        "sky"
+      ]
+    }
+  ]
+}
