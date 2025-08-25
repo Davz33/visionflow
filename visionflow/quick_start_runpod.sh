@@ -89,18 +89,28 @@ fi
 echo -e "${YELLOW}🐳 Step 4: Building Docker image...${NC}"
 
 # Get Docker Hub username
-read -p "Enter your Docker Hub username (or press Enter to skip push): " DOCKER_USERNAME
+read -p "Enter your Docker Hub username (or press Enter to skip RunPod setup): " DOCKER_USERNAME
 
 if [ ! -z "$DOCKER_USERNAME" ]; then
     IMAGE_NAME="${DOCKER_USERNAME}/wan21-service:latest"
+    echo "Tagging existing Docker image: $IMAGE_NAME"
+    docker tag wan21-service:simple "$IMAGE_NAME"
+    echo -e "${GREEN}✅ Docker image tagged successfully${NC}"
 else
-    IMAGE_NAME="wan21-service:latest"
+    echo -e "${YELLOW}⚠️  Skipping Docker Hub push and RunPod setup${NC}"
+    echo -e "${BLUE}📋 Manual Setup Instructions:${NC}"
+    echo ""
+    echo "1. Push your image to Docker Hub:"
+    echo "   docker tag wan21-service:simple YOUR_USERNAME/wan21-service:latest"
+    echo "   docker push YOUR_USERNAME/wan21-service:latest"
+    echo ""
+    echo "2. Go to RunPod Console: https://www.runpod.io/console/serverless"
+    echo "3. Create a new template with image: YOUR_USERNAME/wan21-service:latest"
+    echo "4. Create a serverless endpoint using that template"
+    echo ""
+    echo -e "${GREEN}✅ Local Docker image 'wan21-service:simple' is ready!${NC}"
+    exit 0
 fi
-
-echo "Building Docker image: $IMAGE_NAME"
-docker build -f Dockerfile.wan -t "$IMAGE_NAME" . > /dev/null
-
-echo -e "${GREEN}✅ Docker image built successfully${NC}"
 
 # Optional: Push to Docker Hub
 if [ ! -z "$DOCKER_USERNAME" ]; then
@@ -129,7 +139,6 @@ runpod.api_key = os.environ['RUNPOD_API_KEY']
 print("Creating RunPod template...")
 template_config = {
     "name": "WAN 2.1 Generation Service",
-    "imageName": "$IMAGE_NAME",
     "containerDiskInGb": 50,
     "volumeInGb": 20,
     "volumeMountPath": "/workspace",
@@ -143,7 +152,7 @@ template_config = {
 if os.getenv('HUGGINGFACE_TOKEN'):
     template_config["env"].append({"key": "HUGGINGFACE_TOKEN", "value": os.environ['HUGGINGFACE_TOKEN']})
 
-template = runpod.create_template(template_config)
+template = runpod.create_template("$IMAGE_NAME", template_config)
 template_id = template["id"]
 print(f"✅ Template created: {template_id}")
 
