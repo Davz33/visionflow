@@ -1,14 +1,17 @@
 # Multi-stage Dockerfile for WAN 2.1 Remote Execution on RunPod
 # Optimized for fast startup and minimal size
 
-# Stage 1: Base image with CUDA and Python
-FROM nvidia/cuda:11.8-runtime-ubuntu22.04 as base
+# Stage 1: Base image with CUDA and Python  
+FROM nvidia/cuda:12.1-devel-ubuntu20.04 AS base
 
 # Install system dependencies (minimal set)
 RUN apt-get update && apt-get install -y --no-install-recommends \
+    software-properties-common \
+    && add-apt-repository ppa:deadsnakes/ppa \
+    && apt-get update && apt-get install -y --no-install-recommends \
     python3.10 \
-    python3-pip \
-    python3-dev \
+    python3.10-pip \
+    python3.10-dev \
     git \
     wget \
     curl \
@@ -22,10 +25,10 @@ RUN ln -s /usr/bin/python3.10 /usr/bin/python && \
     python -m pip install --upgrade pip
 
 # Stage 2: Dependencies
-FROM base as dependencies
+FROM base AS dependencies
 
 # Install PyTorch first (largest dependency)
-RUN pip install --no-cache-dir torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu118
+RUN pip install --no-cache-dir torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu121
 
 # Install WAN 2.1 and ML dependencies
 RUN pip install --no-cache-dir \
@@ -42,7 +45,7 @@ RUN pip install --no-cache-dir \
     uvicorn
 
 # Stage 3: Application
-FROM dependencies as application
+FROM dependencies AS application
 
 # Set working directory
 WORKDIR /workspace
@@ -64,6 +67,8 @@ ENV PYTHONPATH=/workspace
 ENV HUGGINGFACE_HUB_CACHE=/workspace/models
 ENV PYTORCH_CUDA_ALLOC_CONF=max_split_size_mb:512
 ENV TOKENIZERS_PARALLELISM=false
+ENV NVIDIA_VISIBLE_DEVICES=all
+ENV NVIDIA_DRIVER_CAPABILITIES=compute,utility
 
 # Create model cache directory
 RUN mkdir -p /workspace/models
