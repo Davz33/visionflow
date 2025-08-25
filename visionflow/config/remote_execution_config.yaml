@@ -1,0 +1,107 @@
+# Remote Execution Configuration for WAN 2.1
+# Choose your preferred backend for delegating inference jobs
+
+execution:
+  # Options: local, ray, modal, runpod, vast_ai
+  preferred_backend: "local"
+  
+  # Fallback to local if remote fails
+  fallback_to_local: true
+  
+  # Auto-select best available backend
+  auto_select: true
+
+# Ray Configuration (Self-hosted distributed)
+ray:
+  # Ray cluster address (use 'auto' for local cluster)
+  address: "auto"  # or "ray://your-cluster:10001"
+  
+  # Worker configuration
+  workers:
+    num_workers: 2
+    gpu_per_worker: 1
+    memory_per_worker_gb: 16
+    
+  # Connection timeout
+  timeout_seconds: 30
+
+# Modal Configuration (Serverless)
+modal:
+  # GPU type for serverless functions
+  gpu_type: "A100"  # A100, H100, T4, V100
+  
+  # Memory allocation
+  memory_mb: 16384  # 16GB
+  
+  # Function timeout
+  timeout_seconds: 3600  # 1 hour
+  
+  # Environment setup
+  environment:
+    python_version: "3.10"
+    torch_version: ">=2.0.0"
+    
+  # Code mounting (your WAN service code)
+  mount_paths:
+    - local: "./visionflow"
+      remote: "/app/visionflow"
+
+# RunPod Configuration (GPU rental)
+runpod:
+  # Your RunPod API key (set in environment as RUNPOD_API_KEY)
+  # api_key: "your-api-key"
+  
+  # Endpoint ID for your deployed WAN service
+  # endpoint_id: "your-endpoint-id" 
+  
+  # Pod template for deployment
+  pod_template:
+    gpu_type: "RTX A6000"  # RTX A6000, A100, H100
+    memory_gb: 32
+    storage_gb: 100
+    
+  # Docker image with your WAN code
+  docker_image: "your-dockerhub/wan-service:latest"
+
+# Vast.ai Configuration (Cheapest GPU rental)
+vast_ai:
+  # Your Vast.ai API key
+  # api_key: "your-api-key"
+  
+  # Instance requirements
+  instance_requirements:
+    gpu_name: "RTX 4090"  # RTX 4090, A6000, A100
+    min_gpu_ram_gb: 16
+    max_price_per_hour: 0.50  # USD
+    
+  # Setup script for your WAN environment
+  setup_script: |
+    #!/bin/bash
+    # Install dependencies
+    pip install torch diffusers transformers accelerate
+    # Clone your repo or mount code
+    git clone https://github.com/your-username/wan-service.git
+    cd wan-service && pip install -e .
+
+# Performance Monitoring
+monitoring:
+  # Track execution times
+  track_performance: true
+  
+  # Log remote execution details
+  detailed_logging: false
+  
+  # Save execution stats
+  save_stats: true
+  stats_file: "execution_stats.json"
+
+# Cost Management
+cost_management:
+  # Maximum cost per generation (USD)
+  max_cost_per_generation: 2.00
+  
+  # Prefer cheaper options when quality allows
+  cost_optimize: true
+  
+  # Alert when costs exceed threshold
+  cost_alert_threshold: 10.00  # USD per day
