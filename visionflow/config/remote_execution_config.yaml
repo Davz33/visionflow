@@ -54,14 +54,38 @@ runpod:
   # Endpoint ID for your deployed WAN service
   # endpoint_id: "your-endpoint-id" 
   
+  # Recommended GPU types (in order of preference)
+  gpu_preferences:
+    - "NVIDIA RTX 4090"          # Best price/performance: $0.44/hr
+    - "NVIDIA GeForce RTX 4090"  # Alternative naming
+    - "NVIDIA RTX A6000"         # Higher cost but reliable: $0.79/hr
+    - "NVIDIA A100 80GB PCIe"    # Premium option: $1.19/hr
+  
   # Pod template for deployment
   pod_template:
-    gpu_type: "RTX A6000"  # RTX A6000, A100, H100
+    gpu_type: "RTX 4090"  # Primary choice
     memory_gb: 32
-    storage_gb: 100
+    storage_gb: 50
+    container_disk_gb: 50
+    volume_gb: 20
+    
+  # Serverless endpoint configuration
+  endpoint_config:
+    idle_timeout: 2              # Minutes before auto-shutdown (save money)
+    max_containers: 3            # Scale up to 3 concurrent
+    locations:
+      us: true
+      eu: false
+      asia: false
     
   # Docker image with your WAN code
-  docker_image: "your-dockerhub/wan-service:latest"
+  docker_image: "your-dockerhub/wan21-service:latest"
+  
+  # Environment variables for container
+  environment:
+    CUDA_VISIBLE_DEVICES: "0"
+    PYTORCH_CUDA_ALLOC_CONF: "max_split_size_mb:512"
+    # HUGGINGFACE_TOKEN will be set automatically if available
 
 # Vast.ai Configuration (Cheapest GPU rental)
 vast_ai:

@@ -1,45 +1,86 @@
-# Dockerfile for WAN 2.1 Remote Execution
-FROM nvidia/cuda:11.8-devel-ubuntu22.04
+# Multi-stage Dockerfile for WAN 2.1 Remote Execution on RunPod
+# Optimized for fast startup and minimal size
 
-# Install Python and system dependencies
-RUN apt-get update && apt-get install -y \
+# Stage 1: Base image with CUDA and Python
+FROM nvidia/cuda:11.8-runtime-ubuntu22.04 as base
+
+# Install system dependencies (minimal set)
+RUN apt-get update && apt-get install -y --no-install-recommends \
     python3.10 \
     python3-pip \
+    python3-dev \
     git \
     wget \
     curl \
-    && rm -rf /var/lib/apt/lists/*
+    libgl1-mesa-glx \
+    libglib2.0-0 \
+    && rm -rf /var/lib/apt/lists/* \
+    && apt-get clean
 
-# Set Python version
-RUN ln -s /usr/bin/python3.10 /usr/bin/python
+# Set Python version and upgrade pip
+RUN ln -s /usr/bin/python3.10 /usr/bin/python && \
+    python -m pip install --upgrade pip
 
-# Install PyTorch and dependencies
-RUN pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu118
+# Stage 2: Dependencies
+FROM base as dependencies
 
-# Install WAN 2.1 dependencies  
-RUN pip install \
+# Install PyTorch first (largest dependency)
+RUN pip install --no-cache-dir torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu118
+
+# Install WAN 2.1 and ML dependencies
+RUN pip install --no-cache-dir \
     diffusers>=0.21.0 \
     transformers>=4.25.0 \
     accelerate>=0.24.0 \
     huggingface_hub>=0.19.0 \
-    opencv-python \
+    opencv-python-headless \
     pillow \
     numpy \
-    scipy
+    scipy \
+    runpod \
+    fastapi \
+    uvicorn
 
-# Copy your WAN service code
-COPY . /app
-WORKDIR /app
+# Stage 3: Application
+FROM dependencies as application
 
-# Install your package
+# Set working directory
+WORKDIR /workspace
+
+# Copy only necessary files (not the entire repo)
+COPY visionflow/ /workspace/visionflow/
+COPY pyproject.toml /workspace/
+COPY requirements.txt /workspace/
+
+# Install the package in development mode
 RUN pip install -e .
 
-# Set environment variables
-ENV CUDA_VISIBLE_DEVICES=0
-ENV HUGGINGFACE_HUB_CACHE=/app/models
+# Create RunPod handler
+COPY scripts/runpod_handler.py /workspace/
 
-# Expose port for API
+# Set environment variables for optimization
+ENV CUDA_VISIBLE_DEVICES=0
+ENV PYTHONPATH=/workspace
+ENV HUGGINGFACE_HUB_CACHE=/workspace/models
+ENV PYTORCH_CUDA_ALLOC_CONF=max_split_size_mb:512
+ENV TOKENIZERS_PARALLELISM=false
+
+# Create model cache directory
+RUN mkdir -p /workspace/models
+
+# Pre-download models (optional - reduces cold start time)
+# Uncomment if you want to bake models into the image
+# RUN python -c "
+# from diffusers import DiffusionPipeline
+# pipeline = DiffusionPipeline.from_pretrained('Wan-AI/Wan2.1-T2V-1.3B-Diffusers', cache_dir='/workspace/models')
+# "
+
+# Expose port for health checks
 EXPOSE 8000
 
-# Run your WAN service
-CMD ["python", "-m", "visionflow.services.generation.wan_video_service"]
+# Health check
+HEALTHCHECK --interval=30s --timeout=30s --start-period=120s --retries=3 \
+    CMD python -c "import torch; print('CUDA available:', torch.cuda.is_available())" || exit 1
+
+# Default command (RunPod will override this)
+CMD ["python", "/workspace/runpod_handler.py"]
