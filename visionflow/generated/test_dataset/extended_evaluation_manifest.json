@@ -1,0 +1,327 @@
+{
+  "metadata": {
+    "name": "Extended WAN Video Evaluation Dataset",
+    "description": "Comprehensive dataset with existing videos and extended test prompts",
+    "created_at": "2025-08-24T22:56:38.365358",
+    "existing_videos": 4,
+    "extended_prompts": 15,
+    "total_test_cases": 19
+  },
+  "existing_videos": [
+    {
+      "filename": "test_video_01.mp4",
+      "path": "/Users/dav/coding/wan-open-eval/visionflow/generated/test_dataset/test_video_01.mp4",
+      "prompt": "A beautiful sunset over a calm ocean with gentle waves, cinematic lighting, peaceful atmosphere",
+      "quality": "high",
+      "duration": 3.0,
+      "tags": [
+        "nature",
+        "sunset",
+        "ocean",
+        "cinematic"
+      ]
+    },
+    {
+      "filename": "test_video_02.mp4",
+      "path": "/Users/dav/coding/wan-open-eval/visionflow/generated/test_dataset/test_video_02.mp4",
+      "prompt": "A cat walking through a garden filled with colorful flowers, soft natural lighting",
+      "quality": "medium",
+      "duration": 5.0,
+      "tags": [
+        "animals",
+        "cat",
+        "garden",
+        "flowers"
+      ]
+    },
+    {
+      "filename": "test_video_03.mp4",
+      "path": "/Users/dav/coding/wan-open-eval/visionflow/generated/test_dataset/test_video_03.mp4",
+      "prompt": "Rain falling on a window with blurred city lights in the background, moody atmosphere",
+      "quality": "high",
+      "duration": 4.0,
+      "tags": [
+        "rain",
+        "urban",
+        "moody",
+        "atmospheric"
+      ]
+    },
+    {
+      "filename": "test_video_04.mp4",
+      "path": "/Users/dav/coding/wan-open-eval/visionflow/generated/test_dataset/test_video_04.mp4",
+      "prompt": "A field of wheat swaying in the wind under a blue sky with white clouds",
+      "quality": "medium",
+      "duration": 6.0,
+      "tags": [
+        "nature",
+        "wheat",
+        "field",
+        "sky"
+      ]
+    }
+  ],
+  "extended_test_prompts": [
+    {
+      "id": "visual_quality_01",
+      "prompt": "A crystal clear mountain lake reflecting snow-capped peaks at golden hour",
+      "category": "landscape",
+      "difficulty": "high",
+      "evaluation_focus": [
+        "visual_quality",
+        "aesthetic_quality"
+      ],
+      "expected_duration": "3-6 seconds",
+      "quality_setting": "high"
+    },
+    {
+      "id": "visual_quality_02",
+      "prompt": "Extreme close-up of dewdrops on a spider web with morning sunlight",
+      "category": "macro",
+      "difficulty": "high",
+      "evaluation_focus": [
+        "visual_quality",
+        "motion_consistency"
+      ],
+      "expected_duration": "3-6 seconds",
+      "quality_setting": "high"
+    },
+    {
+      "id": "visual_quality_03",
+      "prompt": "Professional photography studio with dramatic lighting and shadows",
+      "category": "studio",
+      "difficulty": "medium",
+      "evaluation_focus": [
+        "visual_quality",
+        "aesthetic_quality"
+      ],
+      "expected_duration": "3-6 seconds",
+      "quality_setting": "medium"
+    },
+    {
+      "id": "motion_consistency_01",
+      "prompt": "A pendulum swinging in perfect rhythm with consistent motion",
+      "category": "mechanical",
+      "difficulty": "high",
+      "evaluation_focus": [
+        "motion_consistency",
+        "visual_quality"
+      ],
+      "expected_duration": "3-6 seconds",
+      "quality_setting": "high"
+    },
+    {
+      "id": "motion_consistency_02",
+      "prompt": "Leaves falling from a tree in autumn wind, natural movement",
+      "category": "nature",
+      "difficulty": "medium",
+      "evaluation_focus": [
+        "motion_consistency",
+        "aesthetic_quality"
+      ],
+      "expected_duration": "3-6 seconds",
+      "quality_setting": "medium"
+    },
+    {
+      "id": "motion_consistency_03",
+      "prompt": "A dancer performing fluid movements in slow motion",
+      "category": "performance",
+      "difficulty": "high",
+      "evaluation_focus": [
+        "motion_consistency",
+        "aesthetic_quality"
+      ],
+      "expected_duration": "3-6 seconds",
+      "quality_setting": "high"
+    },
+    {
+      "id": "text_alignment_01",
+      "prompt": "A red Ferrari sports car driving on a winding mountain road",
+      "category": "vehicles",
+      "difficulty": "medium",
+      "evaluation_focus": [
+        "text_video_alignment",
+        "motion_consistency"
+      ],
+      "expected_duration": "3-6 seconds",
+      "quality_setting": "medium"
+    },
+    {
+      "id": "text_alignment_02",
+      "prompt": "A chef chopping vegetables with a sharp knife on wooden cutting board",
+      "category": "cooking",
+      "difficulty": "medium",
+      "evaluation_focus": [
+        "text_video_alignment",
+        "motion_consistency"
+      ],
+      "expected_duration": "3-6 seconds",
+      "quality_setting": "medium"
+    },
+    {
+      "id": "text_alignment_03",
+      "prompt": "Three golden retriever puppies playing with a blue frisbee in green grass",
+      "category": "animals",
+      "difficulty": "high",
+      "evaluation_focus": [
+        "text_video_alignment",
+        "motion_consistency"
+      ],
+      "expected_duration": "3-6 seconds",
+      "quality_setting": "high"
+    },
+    {
+      "id": "aesthetic_quality_01",
+      "prompt": "Minimalist zen garden with raked sand patterns and single stone",
+      "category": "artistic",
+      "difficulty": "high",
+      "evaluation_focus": [
+        "aesthetic_quality",
+        "visual_quality"
+      ],
+      "expected_duration": "3-6 seconds",
+      "quality_setting": "high"
+    },
+    {
+      "id": "aesthetic_quality_02",
+      "prompt": "Abstract watercolor painting coming to life with flowing colors",
+      "category": "abstract",
+      "difficulty": "high",
+      "evaluation_focus": [
+        "aesthetic_quality",
+        "motion_consistency"
+      ],
+      "expected_duration": "3-6 seconds",
+      "quality_setting": "high"
+    },
+    {
+      "id": "aesthetic_quality_03",
+      "prompt": "Elegant calligraphy being written with traditional brush and ink",
+      "category": "calligraphy",
+      "difficulty": "medium",
+      "evaluation_focus": [
+        "aesthetic_quality",
+        "motion_consistency"
+      ],
+      "expected_duration": "3-6 seconds",
+      "quality_setting": "medium"
+    },
+    {
+      "id": "narrative_flow_01",
+      "prompt": "A story unfolds: morning coffee, commute, office work, evening return",
+      "category": "daily_life",
+      "difficulty": "high",
+      "evaluation_focus": [
+        "narrative_flow",
+        "text_video_alignment"
+      ],
+      "expected_duration": "3-6 seconds",
+      "quality_setting": "high"
+    },
+    {
+      "id": "narrative_flow_02",
+      "prompt": "Seasons changing from spring bloom to winter snow in same location",
+      "category": "temporal",
+      "difficulty": "high",
+      "evaluation_focus": [
+        "narrative_flow",
+        "visual_quality"
+      ],
+      "expected_duration": "3-6 seconds",
+      "quality_setting": "high"
+    },
+    {
+      "id": "narrative_flow_03",
+      "prompt": "A seed growing into a flower: planting, sprouting, blooming sequence",
+      "category": "growth",
+      "difficulty": "medium",
+      "evaluation_focus": [
+        "narrative_flow",
+        "motion_consistency"
+      ],
+      "expected_duration": "3-6 seconds",
+      "quality_setting": "medium"
+    }
+  ],
+  "evaluation_benchmark": {
+    "visual_quality": {
+      "weight": 0.25,
+      "metrics": [
+        "sharpness",
+        "clarity",
+        "color_accuracy",
+        "noise_level"
+      ],
+      "threshold_excellent": 0.9,
+      "threshold_good": 0.7,
+      "threshold_acceptable": 0.5
+    },
+    "motion_consistency": {
+      "weight": 0.2,
+      "metrics": [
+        "temporal_coherence",
+        "motion_smoothness",
+        "flicker_detection"
+      ],
+      "threshold_excellent": 0.85,
+      "threshold_good": 0.65,
+      "threshold_acceptable": 0.45
+    },
+    "text_video_alignment": {
+      "weight": 0.25,
+      "metrics": [
+        "semantic_alignment",
+        "object_presence",
+        "scene_accuracy"
+      ],
+      "threshold_excellent": 0.9,
+      "threshold_good": 0.75,
+      "threshold_acceptable": 0.6
+    },
+    "aesthetic_quality": {
+      "weight": 0.15,
+      "metrics": [
+        "composition",
+        "lighting",
+        "color_harmony"
+      ],
+      "threshold_excellent": 0.85,
+      "threshold_good": 0.7,
+      "threshold_acceptable": 0.55
+    },
+    "narrative_flow": {
+      "weight": 0.15,
+      "metrics": [
+        "coherence",
+        "progression",
+        "storytelling"
+      ],
+      "threshold_excellent": 0.8,
+      "threshold_good": 0.65,
+      "threshold_acceptable": 0.5
+    }
+  },
+  "sampling_strategies": {
+    "quick_test": {
+      "max_frames": 5,
+      "strategy": "keyframe_only",
+      "description": "Fast evaluation for development"
+    },
+    "standard_test": {
+      "max_frames": 10,
+      "strategy": "adaptive",
+      "description": "Standard evaluation for most cases"
+    },
+    "comprehensive_test": {
+      "max_frames": 20,
+      "strategy": "temporal_stratified",
+      "description": "Thorough evaluation for benchmarking"
+    }
+  },
+  "usage_instructions": {
+    "basic_evaluation": "Use existing_videos for current functionality testing",
+    "comprehensive_evaluation": "Generate videos for extended_test_prompts for full benchmarking",
+    "benchmark_comparison": "Compare results against evaluation_benchmark thresholds",
+    "sampling_strategy": "Choose appropriate strategy based on testing needs"
+  }
+}
