@@ -8,6 +8,7 @@ import os
 import sys
 import time
 from pathlib import Path
+import json
 
 # Add the visionflow directory to Python path
 visionflow_dir = Path(__file__).parent.parent
@@ -27,12 +28,33 @@ def main():
         try:
             persistence = RunPodDataPersistence()
             
+            # Test S3 connection first
+            print("🔍 Testing S3 connection...")
+            try:
+                persistence._test_s3_connection()
+                print("✅ S3 connection successful")
+            except Exception as e:
+                print(f"❌ S3 connection failed: {e}")
+                print("📋 Continuing with fresh pod...")
+                return
+            
             # List available backups
             backups = persistence.list_backups()
             
             if backups:
                 latest_backup = backups[0]  # Most recent backup
                 print(f"🔄 Restoring latest backup: {latest_backup}")
+                
+                # Get backup info before restoration
+                try:
+                    manifest_obj = persistence.s3_client.get_object(
+                        Bucket=persistence.bucket_name,
+                        Key=f"{persistence.backup_prefix}/{latest_backup}/manifest.json"
+                    )
+                    manifest = json.loads(manifest_obj['Body'].read())
+                    print(f"📊 Backup size: {manifest.get('total_size_bytes', 0) / (1024**3):.1f} GB")
+                except:
+                    print("📊 Backup size: Unknown")
                 
                 # Restore the backup
                 success = persistence.restore_backup(latest_backup)
@@ -66,10 +88,34 @@ def main():
     
     else:
         print("📋 Existing data detected - no restoration needed")
+        
+        # Check if we should create a backup of current state
+        try:
+            persistence = RunPodDataPersistence()
+            
+            # Check if S3 is accessible
+            try:
+                persistence._test_s3_connection()
+                
+                # Ask if user wants to create a backup
+                print("\n💡 Current data detected. Consider creating a backup:")
+                print("   python scripts/runpod_data_persistence.py backup")
+                
+            except Exception as e:
+                print(f"⚠️  S3 not accessible: {e}")
+                
+        except Exception as e:
+            print(f"⚠️  Could not initialize persistence: {e}")
     
     print("\n🚀 Pod startup completed!")
-    print("💡 To create a backup: python scripts/runpod_data_persistence.py backup")
-    print("💡 To restore manually: python scripts/runpod_data_persistence.py restore <backup_name>")
+    print("\n💡 Available commands:")
+    print("   📦 Create backup: python scripts/runpod_data_persistence.py backup")
+    print("   🔄 Restore backup: python scripts/runpod_data_persistence.py restore <backup_name>")
+    print("   📋 List backups: python scripts/runpod_data_persistence.py list")
+    print("   🗑️  Delete backup: python scripts/runpod_data_persistence.py delete <backup_name>")
+    print("   🧹 Cleanup old: python scripts/runpod_data_persistence.py cleanup [keep_count]")
+    print("   📊 Storage info: python scripts/runpod_data_persistence.py info")
+    print("   🧪 Test S3: python scripts/runpod_data_persistence.py test")
 
 if __name__ == "__main__":
     main()
