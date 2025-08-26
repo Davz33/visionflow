@@ -1,0 +1,33 @@
+# Heavy ML evaluation dependencies
+# Install only when full evaluation features are needed
+# Install with: pip install -r requirements_ml_evaluation.txt
+
+# Core ML frameworks (install CPU versions separately to control size)
+# torch>=2.1.0  # Install with: pip install torch --index-url https://download.pytorch.org/whl/cpu
+# torchvision>=0.16.0  # Install with: pip install torchvision --index-url https://download.pytorch.org/whl/cpu
+# torchaudio>=2.1.0  # Install with: pip install torchaudio --index-url https://download.pytorch.org/whl/cpu
+
+# Transformers and models
+transformers>=4.35.0
+accelerate>=0.24.0
+diffusers>=0.24.0
+timm>=0.9.10
+huggingface-hub>=0.17.0
+
+# Evaluation models
+lpips>=0.1.4
+open-clip-torch>=2.20.0
+
+# Advanced image/video processing
+scikit-image>=0.21.0
+matplotlib>=3.7.0
+opencv-python>=4.8.0  # Full version with GUI support
+imageio>=2.31.0
+imageio-ffmpeg>=0.4.9
+
+# ML utilities
+einops>=0.7.0
+safetensors>=0.4.0
+
+# Memory profiling for large models
+memory-profiler>=0.61.0

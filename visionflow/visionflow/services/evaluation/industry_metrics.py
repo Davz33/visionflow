@@ -58,7 +58,7 @@ class IndustryMetrics:
         self.clip_model = None
         self.clip_preprocess = None
         
-        # Metric reliability scores (from slide 15)
+        # Metric reliability scores 
         self.metric_reliabilities = {
             "lpips": 0.91,       # LPIPS reliability: 91%
             "fvmd": 0.87,        # FVMD reliability: 87%  

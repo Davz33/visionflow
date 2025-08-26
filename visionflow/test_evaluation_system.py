@@ -25,7 +25,7 @@ async def test_evaluation_system():
     
     print("🎯 Multi-dimensional Video Evaluation System Test")
     print("=" * 70)
-    print("Testing autoraters and autoevals workflow from slides")
+    print("Testing autoraters and autoevals workflow ")
     print()
     
     # Find a generated video to evaluate

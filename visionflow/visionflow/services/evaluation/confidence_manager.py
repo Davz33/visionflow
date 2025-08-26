@@ -76,7 +76,7 @@ class PerformanceMetrics:
 class ConfidenceManager:
     """
     Manages confidence-based decision making and automated flagging
-    Implements the confidence management workflow from slide 14
+    Implements the confidence management workflow 
     """
     
     def __init__(self, 
@@ -99,7 +99,7 @@ class ConfidenceManager:
         # Performance tracking
         self.performance_history: List[PerformanceMetrics] = []
         
-        # Confidence thresholds (from slide 14)
+        # Confidence thresholds 
         self.confidence_config = {
             ConfidenceLevel.EXCELLENT: {
                 "min_score": 0.9,
@@ -146,7 +146,7 @@ class ConfidenceManager:
     async def process_evaluation(self, evaluation_result: EvaluationResult) -> ConfidenceAction:
         """
         Process an evaluation result and make confidence-based decisions
-        Implements the decision tree from slide 14
+        Implements the decision tree 
         """
         logger.debug(f"🔍 Processing evaluation confidence: {evaluation_result.evaluation_id}")
         
@@ -293,7 +293,7 @@ class ConfidenceManager:
     async def get_performance_metrics(self, hours: Optional[int] = None) -> PerformanceMetrics:
         """
         Calculate performance metrics for continuous learning
-        Implements metrics tracking from slide 13
+        Implements metrics tracking 
         """
         if hours is None:
             hours = self.monitoring_window_hours
@@ -350,7 +350,7 @@ class ConfidenceManager:
     async def check_fine_tuning_triggers(self) -> Dict[str, Any]:
         """
         Check if fine-tuning triggers should be activated
-        Implements continuous learning logic from slide 13
+        Implements continuous learning logic 
         """
         metrics = await self.get_performance_metrics()
         
@@ -361,7 +361,7 @@ class ConfidenceManager:
             "metrics": metrics
         }
         
-        # Low confidence rate trigger (>30% from slide 13)
+        # Low confidence rate trigger (>30%)
         if metrics.low_confidence_rate > self.low_confidence_threshold:
             triggers["low_confidence_trigger"] = True
             triggers["recommendations"].append({
@@ -376,7 +376,7 @@ class ConfidenceManager:
                 ]
             })
         
-        # High automation rate trigger (>90% from slide 13)
+        # High automation rate trigger (>90%)
         if metrics.high_automation_rate > self.high_automation_threshold:
             triggers["high_automation_trigger"] = True
             triggers["recommendations"].append({

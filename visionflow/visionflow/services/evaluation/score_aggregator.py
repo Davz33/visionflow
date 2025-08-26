@@ -52,11 +52,11 @@ class AggregationResult:
 class ScoreAggregator:
     """
     Multi-method score aggregation system
-    Implements ensemble approach from slides 15-19
+    Implements ensemble approach 
     """
     
     def __init__(self):
-        # Metric reliability weights from slide 15
+        # Metric reliability weights 
         # (Higher weights for more reliable metrics)
         self.reliability_weights = {
             EvaluationDimension.PERCEPTUAL_QUALITY: 0.91,      # LPIPS reliability
@@ -82,7 +82,7 @@ class ScoreAggregator:
     async def aggregate_scores(self, dimension_scores: List[DimensionScore]) -> AggregationResult:
         """
         Main aggregation entry point - dynamically selects method based on data quality
-        Implements the workflow from slide 16: Input → Quality Assessment → Method Selection → Aggregation
+        Implements the workflow : Input → Quality Assessment → Method Selection → Aggregation
         """
         logger.debug(f"🎯 Aggregating {len(dimension_scores)} dimension scores")
         
@@ -114,7 +114,7 @@ class ScoreAggregator:
     def _assess_data_quality(self, dimension_scores: List[DimensionScore]) -> QualityAssessment:
         """
         Assess data quality by checking completeness and consistency
-        From slide 16: "data quality is assessed by checking score completeness and consistency"
+        : "data quality is assessed by checking score completeness and consistency"
         """
         total_dimensions = len(EvaluationDimension)
         available_dimensions = len(dimension_scores)
@@ -171,7 +171,7 @@ class ScoreAggregator:
     def _select_aggregation_method(self, quality_assessment: QualityAssessment) -> AggregationMethod:
         """
         Select aggregation method based on data quality
-        From slide 15: method selection based on data quality thresholds
+        : method selection based on data quality thresholds
         """
         if quality_assessment.quality_level == DataQuality.HIGH:
             return AggregationMethod.WEIGHTED_RELIABILITY
@@ -185,7 +185,7 @@ class ScoreAggregator:
                                               quality_assessment: QualityAssessment) -> AggregationResult:
         """
         Weighted reliability aggregation for high-quality data (>0.8)
-        From slide 15: "Weight scores by metric reliability"
+        : "Weight scores by metric reliability"
         """
         if not dimension_scores:
             return self._create_empty_result(AggregationMethod.WEIGHTED_RELIABILITY, quality_assessment)
@@ -232,7 +232,7 @@ class ScoreAggregator:
                                                quality_assessment: QualityAssessment) -> AggregationResult:
         """
         Ensemble multi-method aggregation for medium-quality data (0.6-0.8)
-        From slide 15: "Run all methods and combine results → weighted average with higher weights for higher confidence methods"
+        : "Run all methods and combine results → weighted average with higher weights for higher confidence methods"
         Includes Bayesian uncertainty aggregation
         """
         if not dimension_scores:
@@ -277,7 +277,7 @@ class ScoreAggregator:
         
         final_score = np.average(method_scores, weights=ensemble_weights)
         
-        # Bayesian uncertainty aggregation (from slide 15)
+        # Bayesian uncertainty aggregation 
         uncertainty_metrics = self._bayesian_uncertainty_aggregation(dimension_scores, method_scores, method_confidences)
         
         # Final confidence incorporates uncertainty
@@ -303,7 +303,7 @@ class ScoreAggregator:
                                       quality_assessment: QualityAssessment) -> AggregationResult:
         """
         Conservative aggregation for low-quality data (<0.6)
-        From slide 15: "Use minimum scores across all dimensions"
+        : "Use minimum scores across all dimensions"
         """
         if not dimension_scores:
             return self._create_empty_result(AggregationMethod.CONSERVATIVE, quality_assessment)
@@ -343,7 +343,7 @@ class ScoreAggregator:
                                         method_confidences: List[float]) -> Dict[str, float]:
         """
         Bayesian uncertainty aggregation with error propagation
-        From slide 15: "Standard Error of Mean (SEM) + error propagation"
+        : "Standard Error of Mean (SEM) + error propagation"
         "Uncertainty Propagation: σy = √(a²σx1² + b²σx2² + c²σx3²)"
         """
         

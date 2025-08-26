@@ -280,7 +280,7 @@ class VideoEvaluationOrchestrator:
         self.max_frames_per_video = max_frames_per_video
         self.frame_sampler = FrameSampler(sampling_strategy)
         
-        # Evaluation weights (from slide 15: weighted reliability)
+        # Evaluation weights (: weighted reliability)
         self.dimension_weights = {
             EvaluationDimension.VISUAL_QUALITY: 0.20,
             EvaluationDimension.PERCEPTUAL_QUALITY: 0.18,
@@ -290,7 +290,7 @@ class VideoEvaluationOrchestrator:
             EvaluationDimension.NARRATIVE_FLOW: 0.14
         }
         
-        # Confidence thresholds (from slide 14)
+        # Confidence thresholds 
         self.confidence_thresholds = {
             ConfidenceLevel.EXCELLENT: 0.9,
             ConfidenceLevel.HIGH: 0.8,
@@ -578,7 +578,7 @@ class VideoEvaluationOrchestrator:
     def _aggregate_scores(self, dimension_scores: List[DimensionScore]) -> Tuple[float, float]:
         """
         Aggregate dimension scores using weighted reliability method
-        (from slide 15: weighted reliability aggregation)
+        (: weighted reliability aggregation)
         """
         if not dimension_scores:
             return 0.0, 0.0
@@ -617,7 +617,7 @@ class VideoEvaluationOrchestrator:
     
     def _make_decision(self, confidence_level: ConfidenceLevel, confidence: float) -> Tuple[str, bool, str]:
         """
-        Make decision based on confidence level (from slide 14)
+        Make decision based on confidence level 
         Returns: (decision, requires_human_review, priority)
         """
         if confidence_level == ConfidenceLevel.EXCELLENT:
