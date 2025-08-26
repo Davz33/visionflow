@@ -4,6 +4,7 @@ import asyncio
 import gc
 import os
 import tempfile
+import time
 import torch
 import psutil
 from pathlib import Path
@@ -159,7 +160,7 @@ class WanVideoGenerationService:
             memory_info.update({
                 "gpu_memory_allocated_gb": torch.cuda.memory_allocated() / (1024**3),
                 "gpu_memory_reserved_gb": torch.cuda.memory_reserved() / (1024**3),
-                "gpu_memory_percent": (torch.cuda.memory_allocated() / torch.cuda.max_memory_allocated()) * 100
+                "gpu_memory_percent": (torch.cuda.memory_allocated() / max(torch.cuda.max_memory_allocated(), 1)) * 100
             })
         elif self.device == "mps":
             # For MPS, we primarily monitor system RAM since it's unified memory
@@ -205,8 +206,11 @@ class WanVideoGenerationService:
         logger.info(f"Loading WAN model: {self.model_config.model_id}")
         
         try:
-            # Get cache directory from environment
+            # Get cache directory from environment or use default
             cache_dir = os.getenv('HF_HOME', os.getenv('TRANSFORMERS_CACHE'))
+            if cache_dir is None:
+                cache_dir = os.path.expanduser("~/.cache/huggingface")
+                os.makedirs(cache_dir, exist_ok=True)
             logger.info(f"🔥 Using cache directory: {cache_dir}")
             
             # Load VAE with explicit cache directory
@@ -238,20 +242,31 @@ class WanVideoGenerationService:
             self.pipeline.to(self.device)
             
             # Enable memory efficient attention if available
-            if hasattr(self.pipeline, 'enable_xformers_memory_efficient_attention'):
-                try:
+            try:
+                # Try the newer xformers API first
+                if hasattr(self.pipeline, 'enable_xformers_memory_efficient_attention'):
                     self.pipeline.enable_xformers_memory_efficient_attention()
                     logger.info("✅ xFormers memory efficient attention enabled")
-                except Exception as e:
-                    logger.warning(f"Could not enable xFormers: {e}")
+                else:
+                    # Fallback: try enabling on individual components
+                    if hasattr(self.pipeline.transformer, 'enable_xformers_memory_efficient_attention'):
+                        self.pipeline.transformer.enable_xformers_memory_efficient_attention()
+                        logger.info("✅ xFormers enabled on transformer")
+            except Exception as e:
+                logger.warning(f"Could not enable xFormers: {e}")
             
-            # Enable CPU offload for memory optimization
+            # Enable CPU offload only if GPU memory is limited
             if self.device == "cuda":
-                try:
-                    self.pipeline.enable_model_cpu_offload()
-                    logger.info("✅ CPU offload enabled")
-                except Exception as e:
-                    logger.warning(f"Could not enable CPU offload: {e}")
+                total_gpu_memory = torch.cuda.get_device_properties(0).total_memory / (1024**3)
+                # Only enable CPU offload if we have less than 16GB VRAM
+                if total_gpu_memory < 16.0:
+                    try:
+                        self.pipeline.enable_model_cpu_offload()
+                        logger.info("✅ CPU offload enabled (limited VRAM)")
+                    except Exception as e:
+                        logger.warning(f"Could not enable CPU offload: {e}")
+                else:
+                    logger.info(f"🚀 Keeping model on GPU ({total_gpu_memory:.1f}GB VRAM available)")
             
             self.current_model = model_key
             
@@ -288,6 +303,7 @@ class WanVideoGenerationService:
     async def generate_video(self, request: VideoGenerationRequest) -> Dict[str, Any]:
         """Generate video using WAN 2.1 models."""
         logger.info(f"🎬 Starting video generation: '{request.prompt[:50]}...'")
+        start_time = time.time()
         
         try:
             # Validate request against resource limits
@@ -305,6 +321,17 @@ class WanVideoGenerationService:
                     "error": "Insufficient system resources",
                     "memory_usage": self._get_memory_info()
                 }
+            
+            # Validate output path BEFORE starting expensive generation
+            output_success, output_error, output_path = self._validate_output_path()
+            if not output_success:
+                logger.error(f"🚫 Pre-generation check failed: {output_error}")
+                return {
+                    "status": "failed",
+                    "error": f"Output validation failed: {output_error}",
+                    "memory_usage": self._get_memory_info()
+                }
+            logger.info(f"✅ Pre-generation validation passed - ready to save to: {output_path}")
             
             # Select and load appropriate model
             model_key = self._select_model(request.quality, request.resolution)
@@ -338,9 +365,12 @@ class WanVideoGenerationService:
             result = self.pipeline(**generation_params)
             video_frames = result.frames[0]
             
-            # Export video to file
-            output_path = self._create_output_path()
+            # Export video to file (using pre-validated path)
             export_to_video(video_frames, str(output_path), fps=request.fps)
+            
+            # Get final memory info and calculate generation time
+            final_memory = self._get_memory_info()
+            generation_time = time.time() - start_time
             
             # Create generation result for metadata tracking
             generation_result = {
@@ -383,9 +413,6 @@ class WanVideoGenerationService:
             if self.generation_count % self.resource_limits.cleanup_interval_generations == 0:
                 self._force_cleanup()
             
-            # Get final memory info
-            final_memory = self._get_memory_info()
-            
             logger.info(f"✅ Video generation completed: {output_path}")
             
             return generation_result
@@ -406,16 +433,58 @@ class WanVideoGenerationService:
                 "deformed, disfigured, misshapen limbs, fused fingers, still picture, messy background, "
                 "three legs, many people in the background, walking backwards")
     
+    def _validate_output_path(self) -> tuple[bool, str, Path]:
+        """Validate that we can write to the output directory before generation starts.
+        
+        Returns:
+            (success: bool, error_message: str, output_path: Path)
+        """
+        try:
+            # Ensure output directory exists and is writable
+            output_dir = Path("generated")
+            output_dir.mkdir(exist_ok=True)
+            
+            # Create unique filename
+            import uuid
+            filename = f"wan_video_{uuid.uuid4().hex[:8]}.mp4"
+            output_path = output_dir / filename
+            
+            # Test write permissions by creating a temporary test file
+            test_file = output_dir / f"test_write_{uuid.uuid4().hex[:4]}.tmp"
+            try:
+                with open(test_file, 'w') as f:
+                    f.write("test")
+                test_file.unlink()  # Delete test file
+            except Exception as e:
+                return False, f"Cannot write to output directory: {e}", output_path
+            
+            # Check available disk space (require at least 100MB free)
+            import shutil
+            try:
+                free_space = shutil.disk_usage(output_dir).free
+                free_space_mb = free_space / (1024 * 1024)
+                if free_space_mb < 100:
+                    return False, f"Insufficient disk space: {free_space_mb:.1f}MB available, need at least 100MB", output_path
+            except Exception as e:
+                logger.warning(f"Could not check disk space: {e}")
+                # Continue anyway - disk space check is not critical
+            
+            # Ensure filename doesn't already exist (very unlikely with UUIDs but better safe)
+            if output_path.exists():
+                return False, f"Output file already exists: {output_path}", output_path
+            
+            logger.info(f"✅ Output validation passed: {output_path}")
+            return True, "", output_path
+            
+        except Exception as e:
+            return False, f"Output path validation failed: {e}", Path("generated") / "fallback.mp4"
+
     def _create_output_path(self) -> Path:
         """Create output path for generated video."""
-        # Use host path instead of container path
-        output_dir = Path("/Users/dav/coding/wan-open-eval/visionflow/generated")
-        output_dir.mkdir(exist_ok=True)
-        
-        # Create unique filename
-        import uuid
-        filename = f"wan_video_{uuid.uuid4().hex[:8]}.mp4"
-        return output_dir / filename
+        success, error_msg, output_path = self._validate_output_path()
+        if not success:
+            raise RuntimeError(f"Cannot create output path: {error_msg}")
+        return output_path
     
     async def get_model_status(self) -> Dict[str, Any]:
         """Get current model status and system information."""

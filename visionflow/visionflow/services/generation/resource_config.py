@@ -9,7 +9,7 @@ class ResourceLimits:
     """Configuration for resource limits to prevent system crashes."""
     
     # GPU/MPS memory limits (as fraction of total available memory)
-    gpu_memory_fraction: float = 0.6  # Use only 60% of available GPU memory (conservative for MPS)
+    gpu_memory_fraction: float = 0.85  # Use 85% of available GPU memory (increased for dedicated GPUs)
     mps_memory_fraction: float = 0.5   # Apple Silicon MPS uses unified memory - be more conservative
     
     # System RAM limits (critical for Apple Silicon unified memory)
