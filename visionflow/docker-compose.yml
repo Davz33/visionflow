@@ -164,6 +164,35 @@ services:
       - ./cache/huggingface:/home/app/.cache/huggingface
     restart: unless-stopped
 
+  # Celery Beat Scheduler for Periodic Tasks (Fine-tuning triggers)
+  celery-beat:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.api.optimized
+    container_name: visionflow-beat
+    command: celery -A visionflow.worker beat --loglevel=info --pidfile=/tmp/celerybeat.pid --schedule=/tmp/celerybeat-schedule
+    environment:
+      - ENVIRONMENT=development
+      - DB_HOST=postgres
+      - DB_PORT=5432
+      - DB_NAME=visionflow
+      - DB_USER=visionflow
+      - DB_PASSWORD=visionflow
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - STORAGE_ENDPOINT=minio:9000
+      - STORAGE_ACCESS_KEY=minio
+      - STORAGE_SECRET_KEY=minio123
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    volumes:
+      - ./logs:/app/logs
+      - celery-beat-data:/tmp  # Persistent volume for celery beat schedule
+    restart: unless-stopped
+
   # Prometheus Metrics
   prometheus:
     image: prom/prometheus:latest
@@ -208,4 +237,6 @@ volumes:
   prometheus_data:
     driver: local
   grafana_data:
+    driver: local
+  celery-beat-data:
     driver: local

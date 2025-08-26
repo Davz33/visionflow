@@ -11,7 +11,7 @@ psycopg2-binary>=2.9.7
 
 # Evaluation Models
 lpips>=0.1.4
-clip-by-openai>=1.0.1
+open-clip-torch>=2.20.0
 transformers>=4.35.0
 torch>=2.1.0
 torchvision>=0.16.0

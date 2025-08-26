@@ -1,0 +1,47 @@
+# Optimized Dockerfile for RunPod PyTorch Image
+# Uses: runpod/pytorch:2.8.0-py3.11-cuda12.8.1-cudnn-devel-ubuntu22.04
+
+FROM runpod/pytorch:2.8.0-py3.11-cuda12.8.1-cudnn-devel-ubuntu22.04
+
+# Set working directory
+WORKDIR /workspace
+
+# Copy your visionflow code
+COPY . /workspace/
+
+# Install only the additional dependencies we need
+# (PyTorch is already installed in the base image!)
+RUN pip install --no-cache-dir \
+    diffusers>=0.21.0 \
+    transformers>=4.25.0 \
+    accelerate>=0.24.0 \
+    huggingface_hub>=0.19.0 \
+    opencv-python-headless \
+    pillow \
+    runpod \
+    fastapi \
+    uvicorn \
+    pydantic
+
+# Install your visionflow package
+RUN pip install -e .
+
+# Set environment variables optimized for RunPod
+ENV CUDA_VISIBLE_DEVICES=0
+ENV PYTHONPATH=/workspace
+ENV HUGGINGFACE_HUB_CACHE=/workspace/models
+ENV PYTORCH_CUDA_ALLOC_CONF=max_split_size_mb:512
+ENV TOKENIZERS_PARALLELISM=false
+
+# Create model cache directory
+RUN mkdir -p /workspace/models
+
+# Expose port for RunPod
+EXPOSE 8000
+
+# Health check
+HEALTHCHECK --interval=30s --timeout=30s --start-period=60s --retries=3 \
+    CMD python -c "import torch; print('CUDA available:', torch.cuda.is_available())" || exit 1
+
+# Default command - RunPod handler
+CMD ["python", "/workspace/scripts/runpod_handler.py"]

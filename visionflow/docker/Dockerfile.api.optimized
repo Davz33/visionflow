@@ -1,0 +1,58 @@
+# Multi-stage build to reduce final image size
+FROM python:3.11-slim as builder
+
+# Install build dependencies
+RUN apt-get update && apt-get install -y \
+    libpq-dev \
+    gcc \
+    g++ \
+    && rm -rf /var/lib/apt/lists/*
+
+# Create virtual environment
+RUN python -m venv /opt/venv
+ENV PATH="/opt/venv/bin:$PATH"
+
+# Copy minimal requirements first for better caching
+COPY requirements_production_minimal.txt /tmp/
+# Install minimal dependencies (no heavy ML frameworks initially)
+RUN pip install --no-cache-dir -r /tmp/requirements_production_minimal.txt
+
+# Production stage
+FROM python:3.11-slim
+
+# Install only runtime dependencies
+RUN apt-get update && apt-get install -y \
+    libpq5 \
+    libgl1-mesa-dri \
+    libglib2.0-0 \
+    libsm6 \
+    libxext6 \
+    libxrender1 \
+    libgomp1 \
+    && rm -rf /var/lib/apt/lists/* \
+    && apt-get clean
+
+# Copy virtual environment from builder stage
+COPY --from=builder /opt/venv /opt/venv
+ENV PATH="/opt/venv/bin:$PATH"
+
+# Set working directory
+WORKDIR /app
+
+# Copy only necessary application files
+COPY visionflow/ /app/visionflow/
+# Don't copy generated/ unless absolutely necessary
+# COPY generated/ /app/generated/
+
+# Create necessary directories
+RUN mkdir -p /app/logs /app/models
+
+# Set environment variables
+ENV PYTHONPATH=/app
+ENV PYTHONUNBUFFERED=1
+
+# Expose port
+EXPOSE 8000
+
+# Run the application
+CMD ["python", "-m", "uvicorn", "visionflow.api.main:app", "--host", "0.0.0.0", "--port", "8000"]
