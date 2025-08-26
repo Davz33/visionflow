@@ -113,3 +113,6 @@ docs/_build/
 # Temporary files
 *.tmp
 *.temp
+# RunPod deployment archives
+*.zip
+visionflow-runpod*.zip

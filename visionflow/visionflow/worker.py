@@ -2,6 +2,7 @@
 
 import os
 from celery import Celery
+from celery.schedules import crontab
 from .shared.config import get_settings
 
 # Get application settings
@@ -28,6 +29,27 @@ celery_app.conf.update(
     task_default_retry_delay=60,
     task_max_retries=3,
     result_expires=3600,  # 1 hour
+    
+    # Celery Beat Schedule for periodic tasks
+    beat_schedule={
+        'check-fine-tuning-triggers': {
+            'task': 'check_fine_tuning_triggers',
+            'schedule': crontab(minute=0),  # Every hour on the hour
+            'options': {
+                'expires': 30 * 60,  # Task expires after 30 minutes if not executed
+            }
+        },
+        # You can add more periodic tasks here
+        'system-health-check': {
+            'task': 'check_fine_tuning_triggers',
+            'schedule': crontab(hour=0, minute=0),  # Daily at midnight
+            'kwargs': {'health_check': True},
+            'options': {
+                'expires': 60 * 60,  # Task expires after 1 hour if not executed
+            }
+        },
+    },
+    beat_scheduler='celery.beat:PersistentScheduler',
 )
 
 # Auto-discover tasks
