@@ -7,7 +7,7 @@ from functools import wraps
 from typing import Any, Callable, Dict, Optional
 
 import structlog
-from prometheus_client import Counter, Histogram, Info, start_http_server
+from prometheus_client import Counter, Histogram, Info, start_http_server, Gauge
 from prometheus_client.core import CollectorRegistry
 
 from .config import get_settings
@@ -42,6 +42,41 @@ VIDEO_GENERATION_COUNT = Counter(
 VIDEO_GENERATION_DURATION = Histogram(
     "visionflow_video_generation_duration_seconds",
     "Video generation duration in seconds",
+    ["quality"],
+    registry=REGISTRY
+)
+
+# Enhanced job tracking metrics for monitoring dashboard
+VIDEO_GENERATION_JOBS_ACTIVE = Gauge(
+    "visionflow_video_generation_jobs_active",
+    "Number of currently active video generation jobs",
+    ["status", "quality"],
+    registry=REGISTRY
+)
+
+VIDEO_GENERATION_QUEUE_LENGTH = Gauge(
+    "visionflow_video_generation_queue_length",
+    "Number of jobs waiting in queue",
+    registry=REGISTRY
+)
+
+VIDEO_GENERATION_JOB_PROGRESS = Gauge(
+    "visionflow_video_generation_job_progress",
+    "Progress percentage of video generation jobs",
+    ["job_id", "status"],
+    registry=REGISTRY
+)
+
+VIDEO_GENERATION_AVERAGE_WAIT_TIME = Histogram(
+    "visionflow_video_generation_wait_time_seconds",
+    "Time jobs spend waiting in queue",
+    ["quality"],
+    registry=REGISTRY
+)
+
+VIDEO_GENERATION_SUCCESS_RATE = Gauge(
+    "visionflow_video_generation_success_rate",
+    "Success rate of video generation jobs (0-1)",
     ["quality"],
     registry=REGISTRY
 )
@@ -175,45 +210,92 @@ def track_video_generation(quality: str) -> Callable:
         @wraps(func)
         async def async_wrapper(*args, **kwargs) -> Any:
             start_time = time.time()
-            status = "success"
-            
             try:
+                # Update active jobs count
+                VIDEO_GENERATION_JOBS_ACTIVE.labels(status="processing", quality=quality).inc()
+                
                 result = await func(*args, **kwargs)
-                return result
-            except Exception:
-                status = "error"
-                raise
-            finally:
+                
+                # Record success
                 duration = time.time() - start_time
-                VIDEO_GENERATION_COUNT.labels(quality=quality, status=status).inc()
-                if status == "success":
-                    VIDEO_GENERATION_DURATION.labels(quality=quality).observe(duration)
-        
+                VIDEO_GENERATION_COUNT.labels(quality=quality, status="success").inc()
+                VIDEO_GENERATION_DURATION.labels(quality=quality).observe(duration)
+                
+                # Update active jobs count
+                VIDEO_GENERATION_JOBS_ACTIVE.labels(status="processing", quality=quality).dec()
+                VIDEO_GENERATION_JOBS_ACTIVE.labels(status="completed", quality=quality).inc()
+                
+                return result
+                
+            except Exception as e:
+                # Record failure
+                duration = time.time() - start_time
+                VIDEO_GENERATION_COUNT.labels(quality=quality, status="failed").inc()
+                VIDEO_GENERATION_DURATION.labels(quality=quality).observe(duration)
+                
+                # Update active jobs count
+                VIDEO_GENERATION_JOBS_ACTIVE.labels(status="processing", quality=quality).dec()
+                VIDEO_GENERATION_JOBS_ACTIVE.labels(status="failed", quality=quality).inc()
+                
+                raise
+                
         @wraps(func)
         def sync_wrapper(*args, **kwargs) -> Any:
             start_time = time.time()
-            status = "success"
-            
             try:
+                # Update active jobs count
+                VIDEO_GENERATION_JOBS_ACTIVE.labels(status="processing", quality=quality).inc()
+                
                 result = func(*args, **kwargs)
-                return result
-            except Exception:
-                status = "error"
-                raise
-            finally:
+                
+                # Record success
                 duration = time.time() - start_time
-                VIDEO_GENERATION_COUNT.labels(quality=quality, status=status).inc()
-                if status == "success":
-                    VIDEO_GENERATION_DURATION.labels(quality=quality).observe(duration)
-        
-        # Return appropriate wrapper based on function type
-        if hasattr(func, "__call__"):
-            import inspect
-            if inspect.iscoroutinefunction(func):
-                return async_wrapper
-        return sync_wrapper
-    
+                VIDEO_GENERATION_COUNT.labels(quality=quality, status="success").inc()
+                VIDEO_GENERATION_DURATION.labels(quality=quality).observe(duration)
+                
+                # Update active jobs count
+                VIDEO_GENERATION_JOBS_ACTIVE.labels(status="processing", quality=quality).dec()
+                VIDEO_GENERATION_JOBS_ACTIVE.labels(status="completed", quality=quality).inc()
+                
+                return result
+                
+            except Exception as e:
+                # Record failure
+                duration = time.time() - start_time
+                VIDEO_GENERATION_COUNT.labels(quality=quality, status="failed").inc()
+                VIDEO_GENERATION_DURATION.labels(quality=quality).observe(duration)
+                
+                # Update active jobs count
+                VIDEO_GENERATION_JOBS_ACTIVE.labels(status="processing", quality=quality).dec()
+                VIDEO_GENERATION_JOBS_ACTIVE.labels(status="failed", quality=quality).inc()
+                
+                raise
+                
+        return async_wrapper if asyncio.iscoroutinefunction(func) else sync_wrapper
     return decorator
+
+# Helper functions for real-time job tracking
+def update_job_queue_length(length: int) -> None:
+    """Update the current queue length metric."""
+    VIDEO_GENERATION_QUEUE_LENGTH.set(length)
+
+def update_job_progress(job_id: str, status: str, progress: float) -> None:
+    """Update job progress metric."""
+    VIDEO_GENERATION_JOB_PROGRESS.labels(job_id=job_id, status=status).set(progress)
+
+def update_job_wait_time(quality: str, wait_time: float) -> None:
+    """Update job wait time metric."""
+    VIDEO_GENERATION_AVERAGE_WAIT_TIME.labels(quality=quality).observe(wait_time)
+
+def update_success_rate(quality: str, success_rate: float) -> None:
+    """Update success rate metric."""
+    VIDEO_GENERATION_SUCCESS_RATE.labels(quality=quality).set(success_rate)
+
+def reset_job_metrics() -> None:
+    """Reset job-related metrics (useful for testing)."""
+    VIDEO_GENERATION_JOBS_ACTIVE.clear()
+    VIDEO_GENERATION_QUEUE_LENGTH.set(0)
+    VIDEO_GENERATION_JOB_PROGRESS.clear()
 
 
 @contextmanager

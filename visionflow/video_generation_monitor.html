@@ -1,0 +1,443 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>VisionFlow Video Generation Monitor</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            color: #333;
+        }
+        
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+            color: white;
+        }
+        
+        .header h1 {
+            font-size: 2.5rem;
+            margin-bottom: 10px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+        }
+        
+        .header p {
+            font-size: 1.1rem;
+            opacity: 0.9;
+        }
+        
+        .dashboard-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+        
+        .card {
+            background: white;
+            border-radius: 15px;
+            padding: 25px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+        }
+        
+        .card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 15px 40px rgba(0,0,0,0.15);
+        }
+        
+        .card h3 {
+            color: #667eea;
+            margin-bottom: 15px;
+            font-size: 1.3rem;
+            border-bottom: 2px solid #f0f0f0;
+            padding-bottom: 10px;
+        }
+        
+        .metric {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+            padding: 10px;
+            background: #f8f9fa;
+            border-radius: 8px;
+        }
+        
+        .metric-label {
+            font-weight: 600;
+            color: #555;
+        }
+        
+        .metric-value {
+            font-size: 1.2rem;
+            font-weight: bold;
+            color: #667eea;
+        }
+        
+        .status-indicator {
+            display: inline-block;
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            margin-right: 8px;
+        }
+        
+        .status-active { background-color: #28a745; }
+        .status-queued { background-color: #ffc107; }
+        .status-completed { background-color: #17a2b8; }
+        .status-failed { background-color: #dc3545; }
+        
+        .progress-bar {
+            width: 100%;
+            height: 20px;
+            background-color: #e9ecef;
+            border-radius: 10px;
+            overflow: hidden;
+            margin: 10px 0;
+        }
+        
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #667eea, #764ba2);
+            transition: width 0.3s ease;
+            border-radius: 10px;
+        }
+        
+        .job-list {
+            max-height: 300px;
+            overflow-y: auto;
+        }
+        
+        .job-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 12px;
+            margin-bottom: 8px;
+            background: #f8f9fa;
+            border-radius: 8px;
+            border-left: 4px solid #667eea;
+        }
+        
+        .job-info {
+            flex: 1;
+        }
+        
+        .job-prompt {
+            font-weight: 600;
+            color: #333;
+            margin-bottom: 5px;
+        }
+        
+        .job-details {
+            font-size: 0.9rem;
+            color: #666;
+        }
+        
+        .refresh-btn {
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 25px;
+            cursor: pointer;
+            font-size: 1rem;
+            font-weight: 600;
+            transition: transform 0.2s ease;
+            margin-bottom: 20px;
+        }
+        
+        .refresh-btn:hover {
+            transform: scale(1.05);
+        }
+        
+        .refresh-btn:active {
+            transform: scale(0.95);
+        }
+        
+        .last-updated {
+            text-align: center;
+            color: white;
+            opacity: 0.8;
+            font-size: 0.9rem;
+        }
+        
+        @media (max-width: 768px) {
+            .dashboard-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .header h1 {
+                font-size: 2rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🎬 VisionFlow Video Generation Monitor</h1>
+            <p>Real-time monitoring of video generation jobs and system performance</p>
+        </div>
+        
+        <button class="refresh-btn" onclick="refreshData()">🔄 Refresh Data</button>
+        
+        <div class="dashboard-grid">
+            <!-- System Overview Card -->
+            <div class="card">
+                <h3>📊 System Overview</h3>
+                <div class="metric">
+                    <span class="metric-label">Total Jobs Generated</span>
+                    <span class="metric-value" id="total-jobs">-</span>
+                </div>
+                <div class="metric">
+                    <span class="metric-label">Success Rate</span>
+                    <span class="metric-value" id="success-rate">-</span>
+                </div>
+                <div class="metric">
+                    <span class="metric-label">Average Duration</span>
+                    <span class="metric-value" id="avg-duration">-</span>
+                </div>
+                <div class="metric">
+                    <span class="metric-label">System Status</span>
+                    <span class="metric-value" id="system-status">-</span>
+                </div>
+            </div>
+            
+            <!-- Active Jobs Card -->
+            <div class="card">
+                <h3>⚡ Active Jobs</h3>
+                <div class="metric">
+                    <span class="metric-label">Currently Processing</span>
+                    <span class="metric-value" id="active-jobs">-</span>
+                </div>
+                <div class="metric">
+                    <span class="metric-label">Queue Length</span>
+                    <span class="metric-value" id="queue-length">-</span>
+                </div>
+                <div class="metric">
+                    <span class="metric-label">Completed Today</span>
+                    <span class="metric-value" id="completed-today">-</span>
+                </div>
+                <div class="metric">
+                    <span class="metric-label">Failed Today</span>
+                    <span class="metric-value" id="failed-today">-</span>
+                </div>
+            </div>
+            
+            <!-- Performance Metrics Card -->
+            <div class="card">
+                <h3>📈 Performance Metrics</h3>
+                <div class="metric">
+                    <span class="metric-label">95th Percentile Duration</span>
+                    <span class="metric-value" id="p95-duration">-</span>
+                </div>
+                <div class="metric">
+                    <span class="metric-label">Median Duration</span>
+                    <span class="metric-value" id="median-duration">-</span>
+                </div>
+                <div class="metric">
+                    <span class="metric-label">Jobs per Hour</span>
+                    <span class="metric-value" id="jobs-per-hour">-</span>
+                </div>
+                <div class="metric">
+                    <span class="metric-label">Error Rate</span>
+                    <span class="metric-value" id="error-rate">-</span>
+                </div>
+            </div>
+            
+            <!-- Recent Jobs Card -->
+            <div class="card">
+                <h3>🕒 Recent Jobs</h3>
+                <div class="job-list" id="recent-jobs">
+                    <div class="job-item">
+                        <div class="job-info">
+                            <div class="job-prompt">Loading recent jobs...</div>
+                            <div class="job-details">Please wait...</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="last-updated">
+            Last updated: <span id="last-updated">Never</span>
+        </div>
+    </div>
+
+    <script>
+        // Configuration
+        const API_BASE_URL = window.location.hostname === 'localhost' ? 'http://localhost:8000' : '';
+        const REFRESH_INTERVAL = 5000; // 5 seconds
+        
+        // State
+        let lastUpdateTime = null;
+        
+        // Initialize dashboard
+        document.addEventListener('DOMContentLoaded', function() {
+            refreshData();
+            setInterval(refreshData, REFRESH_INTERVAL);
+        });
+        
+        // Refresh data from API
+        async function refreshData() {
+            try {
+                await Promise.all([
+                    fetchSystemMetrics(),
+                    fetchJobMetrics(),
+                    fetchRecentJobs()
+                ]);
+                
+                updateLastUpdated();
+            } catch (error) {
+                console.error('Error refreshing data:', error);
+                showError('Failed to refresh data. Please check your connection.');
+            }
+        }
+        
+        // Fetch system metrics
+        async function fetchSystemMetrics() {
+            try {
+                const response = await fetch(`${API_BASE_URL}/health`);
+                const data = await response.json();
+                
+                // Update system status
+                document.getElementById('system-status').textContent = data.status;
+                document.getElementById('system-status').style.color = data.status === 'healthy' ? '#28a745' : '#dc3545';
+                
+            } catch (error) {
+                console.error('Error fetching system metrics:', error);
+            }
+        }
+        
+        // Fetch job metrics (simulated for now)
+        async function fetchJobMetrics() {
+            try {
+                // In a real implementation, these would come from Prometheus metrics
+                // For now, we'll simulate the data
+                const mockData = generateMockJobData();
+                
+                // Update metrics
+                document.getElementById('total-jobs').textContent = mockData.totalJobs;
+                document.getElementById('success-rate').textContent = mockData.successRate + '%';
+                document.getElementById('avg-duration').textContent = mockData.avgDuration + 's';
+                document.getElementById('active-jobs').textContent = mockData.activeJobs;
+                document.getElementById('queue-length').textContent = mockData.queueLength;
+                document.getElementById('completed-today').textContent = mockData.completedToday;
+                document.getElementById('failed-today').textContent = mockData.failedToday;
+                document.getElementById('p95-duration').textContent = mockData.p95Duration + 's';
+                document.getElementById('median-duration').textContent = mockData.medianDuration + 's';
+                document.getElementById('jobs-per-hour').textContent = mockData.jobsPerHour;
+                document.getElementById('error-rate').textContent = mockData.errorRate + '%';
+                
+            } catch (error) {
+                console.error('Error fetching job metrics:', error);
+            }
+        }
+        
+        // Fetch recent jobs
+        async function fetchRecentJobs() {
+            try {
+                const response = await fetch(`${API_BASE_URL}/generate/video/history?limit=5`);
+                const data = await response.json();
+                
+                updateRecentJobs(data.generations || []);
+                
+            } catch (error) {
+                console.error('Error fetching recent jobs:', error);
+                // Show mock data if API is not available
+                updateRecentJobs(generateMockRecentJobs());
+            }
+        }
+        
+        // Update recent jobs display
+        function updateRecentJobs(jobs) {
+            const container = document.getElementById('recent-jobs');
+            
+            if (jobs.length === 0) {
+                container.innerHTML = '<div class="job-item"><div class="job-info"><div class="job-prompt">No recent jobs</div><div class="job-details">Jobs will appear here once they are processed</div></div></div>';
+                return;
+            }
+            
+            container.innerHTML = jobs.map(job => `
+                <div class="job-item">
+                    <div class="job-info">
+                        <div class="job-prompt">${job.prompt || 'Video Generation'}</div>
+                        <div class="job-details">
+                            ${job.quality || 'Medium'} quality • ${job.duration || 5}s • ${job.status || 'Unknown'}
+                        </div>
+                    </div>
+                    <span class="status-indicator status-${job.status || 'unknown'}"></span>
+                </div>
+            `).join('');
+        }
+        
+        // Generate mock job data for demonstration
+        function generateMockJobData() {
+            return {
+                totalJobs: Math.floor(Math.random() * 1000) + 500,
+                successRate: (Math.random() * 20 + 80).toFixed(1),
+                avgDuration: (Math.random() * 30 + 45).toFixed(1),
+                activeJobs: Math.floor(Math.random() * 5) + 1,
+                queueLength: Math.floor(Math.random() * 10),
+                completedToday: Math.floor(Math.random() * 50) + 20,
+                failedToday: Math.floor(Math.random() * 5),
+                p95Duration: (Math.random() * 60 + 90).toFixed(1),
+                medianDuration: (Math.random() * 30 + 45).toFixed(1),
+                jobsPerHour: Math.floor(Math.random() * 10) + 5,
+                errorRate: (Math.random() * 10).toFixed(1)
+            };
+        }
+        
+        // Generate mock recent jobs
+        function generateMockRecentJobs() {
+            const prompts = [
+                'A beautiful sunset over the ocean',
+                'A cat playing with a ball of yarn',
+                'A futuristic city skyline',
+                'A forest with falling leaves',
+                'A rocket launching into space'
+            ];
+            
+            const qualities = ['low', 'medium', 'high', 'ultra'];
+            const statuses = ['completed', 'processing', 'queued', 'failed'];
+            
+            return Array.from({length: 5}, (_, i) => ({
+                prompt: prompts[i % prompts.length],
+                quality: qualities[Math.floor(Math.random() * qualities.length)],
+                duration: Math.floor(Math.random() * 20) + 5,
+                status: statuses[Math.floor(Math.random() * statuses.length)],
+                created_at: new Date(Date.now() - Math.random() * 86400000).toISOString()
+            }));
+        }
+        
+        // Update last updated timestamp
+        function updateLastUpdated() {
+            lastUpdateTime = new Date();
+            document.getElementById('last-updated').textContent = lastUpdateTime.toLocaleTimeString();
+        }
+        
+        // Show error message
+        function showError(message) {
+            console.error(message);
+            // You could add a toast notification here
+        }
+    </script>
+</body>
+</html>
