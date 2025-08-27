@@ -283,7 +283,7 @@
 
     <script>
         // Configuration
-        const API_BASE_URL = window.location.hostname === 'localhost' ? 'http://localhost:8000' : '';
+        const API_BASE_URL = window.location.hostname === 'localhost' ? 'http://localhost:30000' : '';
         const REFRESH_INTERVAL = 5000; // 5 seconds
         
         // State
@@ -323,6 +323,9 @@
                 
             } catch (error) {
                 console.error('Error fetching system metrics:', error);
+                // Show mock data if API is not available
+                document.getElementById('system-status').textContent = 'API Unavailable';
+                document.getElementById('system-status').style.color = '#dc3545';
             }
         }
         
@@ -438,6 +441,19 @@
             console.error(message);
             // You could add a toast notification here
         }
+        
+        // Add connection status indicator
+        function updateConnectionStatus() {
+            const statusElement = document.getElementById('system-status');
+            if (API_BASE_URL) {
+                statusElement.innerHTML += ' <small>(Local k8s)</small>';
+            } else {
+                statusElement.innerHTML += ' <small>(Mock data)</small>';
+            }
+        }
+        
+        // Initialize connection status
+        updateConnectionStatus();
     </script>
 </body>
 </html>
