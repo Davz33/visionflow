@@ -31,3 +31,4 @@ safetensors>=0.4.0
 
 # Memory profiling for large models
 memory-profiler>=0.61.0
+

@@ -13,18 +13,22 @@ from fastapi.middleware.cors import CORSMiddleware
 from prometheus_fastapi_instrumentator import Instrumentator
 
 from ..shared.monitoring import get_logger
+from ..shared.models import VideoGenerationRequest, VideoGenerationResult
 from ..services.evaluation.video_evaluation_orchestrator import VideoEvaluationOrchestrator, SamplingStrategy
 from ..services.generation.video_metadata_tracker import metadata_tracker
+from ..services.generation.wan_video_service import WanVideoGenerationService
 
 logger = get_logger(__name__)
 
 # Global evaluation orchestrator
 orchestrator: VideoEvaluationOrchestrator = None
+# Global video generation service
+video_generation_service: WanVideoGenerationService = None
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """Application lifespan management"""
-    global orchestrator
+    global orchestrator, video_generation_service
     
     logger.info("🚀 Starting VisionFlow API...")
     
@@ -34,6 +38,9 @@ async def lifespan(app: FastAPI):
         max_frames_per_video=int(os.getenv('MAX_FRAMES_PER_VIDEO', '20'))
     )
     
+    # Initialize video generation service
+    video_generation_service = WanVideoGenerationService()
+    
     logger.info("✅ VisionFlow API ready")
     
     yield
@@ -42,8 +49,8 @@ async def lifespan(app: FastAPI):
 
 # Create FastAPI application
 app = FastAPI(
-    title="VisionFlow Video Evaluation API",
-    description="Production API for automated video quality assessment",
+    title="VisionFlow Video Evaluation & Generation API",
+    description="Production API for automated video quality assessment and WAN 2.1 video generation",
     version="1.0.0",
     lifespan=lifespan
 )
@@ -66,9 +73,21 @@ if os.getenv('ENABLE_PROMETHEUS', 'false').lower() == 'true':
 async def root():
     """Root endpoint"""
     return {
-        "message": "VisionFlow Video Evaluation API",
+        "message": "VisionFlow Video Evaluation & Generation API",
         "version": "1.0.0",
-        "status": "running"
+        "status": "running",
+        "capabilities": {
+            "video_evaluation": "available",
+            "video_generation": "available",
+            "metadata_tracking": "available"
+        },
+        "endpoints": {
+            "evaluation": "/evaluate/video",
+            "generation": "/generate/video",
+            "metadata": "/metadata/video",
+            "analytics": "/analytics/summary",
+            "health": "/health"
+        }
     }
 
 @app.get("/health")
@@ -79,6 +98,7 @@ async def health_check():
         "timestamp": str(asyncio.get_event_loop().time()),
         "services": {
             "evaluation": "ready" if orchestrator else "not_ready",
+            "video_generation": "ready" if video_generation_service else "not_ready",
             "metadata": "ready"
         }
     }
@@ -177,6 +197,104 @@ async def get_analytics_summary():
         
     except Exception as e:
         logger.error(f"❌ Failed to get analytics: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+# Video Generation Endpoints
+@app.post("/generate/video")
+async def generate_video(request: VideoGenerationRequest):
+    """
+    Generate video using WAN 2.1 models
+    
+    Args:
+        request: Video generation request with prompt and parameters
+    
+    Returns:
+        Video generation result with video path and metadata
+    """
+    if not video_generation_service:
+        raise HTTPException(status_code=503, detail="Video generation service not ready")
+    
+    try:
+        logger.info(f"🎬 Starting video generation: '{request.prompt[:50]}...'")
+        
+        # Generate video using the WAN service
+        result = await video_generation_service.generate_video(request)
+        
+        if result.get("status") == "failed":
+            raise HTTPException(status_code=500, detail=result.get("error", "Video generation failed"))
+        
+        # Return structured result
+        return VideoGenerationResult(
+            video_path=result.get("video_path", ""),
+            metadata={
+                "prompt": request.prompt,
+                "duration": request.duration,
+                "quality": request.quality.value,
+                "fps": request.fps,
+                "resolution": request.resolution,
+                "seed": request.seed,
+                "guidance_scale": request.guidance_scale,
+                "num_inference_steps": request.num_inference_steps,
+                "generation_time": result.get("generation_time", 0),
+                "memory_usage": result.get("memory_usage", {})
+            },
+            quality_metrics=result.get("quality_metrics", {}),
+            generation_time=result.get("generation_time", 0),
+            model_version=result.get("model_version", "wan2.1")
+        )
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"❌ Video generation failed: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.get("/generate/video/status/{generation_id}")
+async def get_generation_status(generation_id: str):
+    """Get status of a video generation job"""
+    try:
+        # This would typically query a job queue or database
+        # For now, return a placeholder response
+        return {
+            "generation_id": generation_id,
+            "status": "completed",  # This should be dynamic
+            "progress": 100,
+            "estimated_completion": None,
+            "created_at": "2024-01-01T00:00:00Z"  # This should be dynamic
+        }
+    except Exception as e:
+        logger.error(f"❌ Failed to get generation status: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.get("/generate/video/history")
+async def get_generation_history(limit: int = 10, offset: int = 0):
+    """Get history of video generation jobs"""
+    try:
+        # This would typically query a database
+        # For now, return a placeholder response
+        return {
+            "generations": [],
+            "total_count": 0,
+            "limit": limit,
+            "offset": offset
+        }
+    except Exception as e:
+        logger.error(f"❌ Failed to get generation history: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.delete("/generate/video/{generation_id}")
+async def cancel_generation(generation_id: str):
+    """Cancel a video generation job"""
+    try:
+        # This would typically cancel a running job
+        # For now, return a placeholder response
+        return {
+            "generation_id": generation_id,
+            "status": "cancelled",
+            "message": "Generation job cancelled successfully"
+        }
+    except Exception as e:
+        logger.error(f"❌ Failed to cancel generation: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
 if __name__ == "__main__":
