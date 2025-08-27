@@ -1,26 +1,52 @@
-# Local Kubernetes cluster configuration
+# Local Kubernetes cluster configuration for VisionFlow
 kind: Cluster
 apiVersion: kind.x-k8s.io/v1alpha4
-name: visionflow
+name: visionflow-local
 nodes:
 - role: control-plane
   image: kindest/node:v1.28.0
   extraPortMappings:
+  # API Gateway
   - containerPort: 30000
     hostPort: 8000
     protocol: TCP
+  # Orchestration Service
   - containerPort: 30001
     hostPort: 8001
     protocol: TCP
+  # Generation Service
   - containerPort: 30002
     hostPort: 8002
     protocol: TCP
+  # Prometheus
   - containerPort: 30090
     hostPort: 9090
     protocol: TCP
+  # Grafana
   - containerPort: 30300
     hostPort: 3000
     protocol: TCP
+  # MinIO Console
+  - containerPort: 30901
+    hostPort: 9001
+    protocol: TCP
+  extraMounts:
+  # Mount local directories for persistent data
+  - hostPath: ./models
+    containerPath: /models
+  - hostPath: ./generated
+    containerPath: /generated
+  - hostPath: ./logs
+    containerPath: /logs
+  - hostPath: ./data
+    containerPath: /data
+  kubeadmConfigPatches:
+  - |
+    kind: InitConfiguration
+    nodeRegistration:
+      kubeletExtraArgs:
+        node-labels: "ingress-ready=true"
+        max-pods: "250"
 - role: worker
   image: kindest/node:v1.28.0
   extraMounts:
@@ -28,9 +54,14 @@ nodes:
     containerPath: /models
   - hostPath: ./generated
     containerPath: /generated
+  - hostPath: ./logs
+    containerPath: /logs
+  - hostPath: ./data
+    containerPath: /data
   kubeadmConfigPatches:
   - |
     kind: JoinConfiguration
     nodeRegistration:
       kubeletExtraArgs:
-        node-labels: "ingress-ready=true"
+        node-labels: "worker=true"
+        max-pods: "250"

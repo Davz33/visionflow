@@ -74,8 +74,7 @@ check_rsync() {
 # Function to check SSH connection
 check_ssh() {
     print_status "Testing SSH connection to RunPod..."
-    if ssh -p "$RUNPOD_PORT" -i "$SSH_KEY" -o ConnectTimeout=10 -o BatchMode=yes "root@$RUNPOD_IP" "echo 'SSH connection successful'" 2>/dev/null; then
-        print_success "SSH connection established"
+    if ssh -p "$RUNPOD_PORT" -i "$SSH_KEY" -o ConnectTimeout=10 "root@$RUNPOD_IP" "echo 'SSH connection successful'" 2>/dev/null; then        print_success "SSH connection established"
         return 0
     else
         print_error "SSH connection failed. Please check your credentials and connection."
