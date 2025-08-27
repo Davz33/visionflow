@@ -34,9 +34,9 @@ bash "$SCRIPT_DIR/build-images.sh"
 # Check if using kind and load images
 if kubectl config current-context | grep -q "kind"; then
     echo "🐋 Loading images into kind cluster..."
-    kind load docker-image visionflow-api:local
-    kind load docker-image visionflow-generation:local
-    kind load docker-image visionflow-orchestrator:local
+    kind load docker-image visionflow-api:local --name visionflow-local
+    kind load docker-image visionflow-generation:local --name visionflow-local
+    kind load docker-image visionflow-orchestrator:local --name visionflow-local
 fi
 
 # Apply Kubernetes manifests
