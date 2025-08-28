@@ -27,6 +27,7 @@ import torch
 from PIL import Image
 
 from ...shared.monitoring import get_logger
+from .metrics import record_evaluation_metrics, record_evaluation_failure
 
 logger = get_logger(__name__)
 

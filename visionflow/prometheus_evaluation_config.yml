@@ -1,0 +1,10 @@
+
+# VisionFlow Video Evaluation Metrics
+# Add this to your prometheus.yml or prometheus configuration
+
+scrape_configs:
+  - job_name: 'visionflow-evaluation'
+    static_configs:
+      - targets: ['localhost:9091']  # Your metrics endpoint
+    metrics_path: '/metrics'
+    scrape_interval: 15s
