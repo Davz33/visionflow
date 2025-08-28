@@ -1,0 +1,58 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: api-gateway
+  namespace: visionflow-local
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: api-gateway
+  template:
+    metadata:
+      labels:
+        app: api-gateway
+    spec:
+      containers:
+      - name: api
+        image: python:3.11-slim
+        workingDir: /app
+        command: ["/bin/bash"]
+        args:
+        - -c
+        - |
+          # Copy code from mounted volume (if it exists) or use default
+          if [ -d "/app/visionflow" ]; then
+            echo "Using mounted code from /app/visionflow"
+            cd /app/visionflow
+          else
+            echo "No mounted code found, using default"
+          fi
+          
+          # Install dependencies
+          pip install -r requirements.txt
+          
+          # Start the API with auto-reload
+          python -m uvicorn visionflow.api.main:app --host 0.0.0.0 --port 8000 --reload
+        ports:
+        - containerPort: 8000
+        env:
+        - name: PYTHONPATH
+          value: "/app"
+        - name: ENABLE_PROMETHEUS
+          value: "true"
+        volumeMounts:
+        - name: app-code
+          mountPath: /app
+        resources:
+          requests:
+            memory: "512Mi"
+            cpu: "250m"
+          limits:
+            memory: "1Gi"
+            cpu: "500m"
+      volumes:
+      - name: app-code
+        hostPath:
+          path: /Users/dav/coding/wan-open-eval/visionflow
+          type: DirectoryOrCreate

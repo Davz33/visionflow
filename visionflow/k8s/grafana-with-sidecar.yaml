@@ -1,0 +1,82 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: grafana
+  namespace: visionflow-local
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: grafana
+  template:
+    metadata:
+      labels:
+        app: grafana
+    spec:
+      containers:
+      - name: grafana
+        image: visionflow-grafana:custom
+        ports:
+        - containerPort: 3000
+        env:
+        - name: GF_SECURITY_ADMIN_USER
+          value: "admin"
+        - name: GF_SECURITY_ADMIN_PASSWORD
+          value: "admin123"
+        - name: GF_INSTALL_PLUGINS
+          value: "grafana-kubernetes-app"
+        volumeMounts:
+        - name: grafana-storage
+          mountPath: /var/lib/grafana
+        - name: grafana-dashboards
+          mountPath: /etc/grafana/provisioning/dashboards
+        - name: grafana-datasources
+          mountPath: /etc/grafana/provisioning/datasources
+        resources:
+          requests:
+            memory: "256Mi"
+            cpu: "100m"
+          limits:
+            memory: "512Mi"
+            cpu: "200m"
+      - name: dashboard-importer
+        image: visionflow-grafana:custom
+        command: ["/bin/sh"]
+        args:
+        - -c
+        - |
+          echo "Waiting for Grafana to be ready..."
+          until curl -s http://localhost:3000/api/health > /dev/null; do
+            sleep 2
+          done
+          
+          echo "Grafana is ready, importing dashboard..."
+          sleep 5
+          
+          python3 /usr/local/bin/import_dashboard.py
+          
+          echo "Dashboard import completed! Keeping container alive..."
+          # Keep the container running
+          tail -f /dev/null
+        env:
+        - name: GF_SECURITY_ADMIN_USER
+          value: "admin"
+        - name: GF_SECURITY_ADMIN_PASSWORD
+          value: "admin123"
+        resources:
+          requests:
+            memory: "64Mi"
+            cpu: "50m"
+          limits:
+            memory: "128Mi"
+            cpu: "100m"
+      volumes:
+      - name: grafana-storage
+        persistentVolumeClaim:
+          claimName: grafana-storage-pvc
+      - name: grafana-dashboards
+        configMap:
+          name: grafana-dashboards-config
+      - name: grafana-datasources
+        configMap:
+          name: grafana-datasources-config

@@ -1,0 +1,18 @@
+# Custom Grafana image with automatic dashboard import
+FROM grafana/grafana:latest
+
+# Install Python and required packages using Alpine package manager
+USER root
+RUN apk add --no-cache python3 py3-requests curl
+
+# Copy the import script
+COPY import_dashboard.py /usr/local/bin/
+
+# Make the script executable
+RUN chmod +x /usr/local/bin/import_dashboard.py
+
+# Switch back to grafana user
+USER grafana
+
+# Use the default Grafana entrypoint
+ENTRYPOINT ["/run.sh"]

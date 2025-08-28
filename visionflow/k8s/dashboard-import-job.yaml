@@ -1,0 +1,34 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: grafana-dashboard-importer
+  namespace: visionflow-local
+spec:
+  backoffLimit: 3
+  template:
+    spec:
+      containers:
+      - name: dashboard-importer
+        image: visionflow-grafana:custom
+        command: ["/bin/sh"]
+        args:
+        - -c
+        - |
+          echo "Waiting for Grafana to be ready..."
+          until curl -s http://grafana-service:3000/api/health > /dev/null; do
+            echo "Waiting for Grafana service..."
+            sleep 5
+          done
+          
+          echo "Grafana is ready, importing dashboard..."
+          sleep 10
+          
+          python3 /usr/local/bin/import_dashboard.py
+          
+          echo "Dashboard import completed!"
+        env:
+        - name: GF_SECURITY_ADMIN_USER
+          value: "admin"
+        - name: GF_SECURITY_ADMIN_PASSWORD
+          value: "admin123"
+      restartPolicy: Never
