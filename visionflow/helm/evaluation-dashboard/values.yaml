@@ -1,0 +1,32 @@
+# Default values for evaluation-dashboard
+replicaCount: 1
+
+image:
+  repository: curlimages/curl
+  tag: latest
+  pullPolicy: IfNotPresent
+
+grafana:
+  host: grafana
+  port: 3000
+  user: admin
+  password: admin
+
+dashboard:
+  name: "VisionFlow Video Evaluation Dashboard"
+  tags: ["visionflow", "video-evaluation", "quality-assessment"]
+  refresh: "30s"
+
+resources:
+  limits:
+    cpu: 100m
+    memory: 128Mi
+  requests:
+    cpu: 50m
+    memory: 64Mi
+
+nodeSelector: {}
+
+tolerations: []
+
+affinity: {}
