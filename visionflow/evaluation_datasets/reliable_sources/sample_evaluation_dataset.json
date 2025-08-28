@@ -1,0 +1,78 @@
+{
+  "metadata": {
+    "name": "Reliable Evaluation Video Samples",
+    "description": "Curated sample videos for comprehensive video generation evaluation",
+    "created_at": "2025-08-28T10:44:37",
+    "total_videos": 5,
+    "evaluation_framework": "VBench + Video-MME + ETVA",
+    "target_duration": "10 seconds",
+    "quality_standards": "Industry benchmark quality"
+  },
+  "videos": [
+    {
+      "filename": "sample_01_landscape.mp4",
+      "prompt": "A serene mountain landscape at sunset with rolling hills, snow-capped peaks, and golden light filtering through clouds. The scene should show natural beauty with realistic lighting and atmospheric effects.",
+      "category": "landscape",
+      "evaluation_criteria": [
+        "visual_quality",
+        "lighting_realism",
+        "spatial_consistency",
+        "temporal_smoothness"
+      ],
+      "expected_duration": "10s",
+      "source": "vbench_style"
+    },
+    {
+      "filename": "sample_02_action.mp4",
+      "prompt": "A dynamic car chase scene through a city street with realistic motion blur, camera shake, and smooth transitions between frames. The action should maintain spatial coherence and temporal consistency.",
+      "category": "action",
+      "evaluation_criteria": [
+        "motion_smoothness",
+        "spatial_coherence",
+        "temporal_consistency",
+        "action_clarity"
+      ],
+      "expected_duration": "10s",
+      "source": "vbench_style"
+    },
+    {
+      "filename": "sample_03_object.mp4",
+      "prompt": "A detailed close-up of a vintage camera with intricate mechanical parts, showing realistic textures, lighting, and depth. The object should maintain consistent appearance across all frames.",
+      "category": "object",
+      "evaluation_criteria": [
+        "object_consistency",
+        "texture_detail",
+        "lighting_realism",
+        "spatial_stability"
+      ],
+      "expected_duration": "10s",
+      "source": "vbench_style"
+    },
+    {
+      "filename": "sample_04_human_activity.mp4",
+      "prompt": "A person cooking in a modern kitchen, showing realistic human movements, facial expressions, and interaction with kitchen objects. The scene should maintain human anatomy consistency.",
+      "category": "human_activity",
+      "evaluation_criteria": [
+        "human_anatomy",
+        "motion_naturalness",
+        "object_interaction",
+        "facial_consistency"
+      ],
+      "expected_duration": "10s",
+      "source": "vbench_style"
+    },
+    {
+      "filename": "sample_05_nature.mp4",
+      "prompt": "A flowing river with realistic water physics, showing natural movement patterns, reflections, and environmental details. The water should exhibit natural fluid dynamics.",
+      "category": "nature",
+      "evaluation_criteria": [
+        "physics_realism",
+        "texture_detail",
+        "motion_naturalness",
+        "environmental_consistency"
+      ],
+      "expected_duration": "10s",
+      "source": "vbench_style"
+    }
+  ]
+}

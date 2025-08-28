@@ -1,0 +1,58 @@
+{
+  "landscape": {
+    "description": "Evaluation prompts for landscape and nature videos",
+    "prompts": [
+      "A majestic mountain range at golden hour with dramatic clouds and natural lighting. The scene should show realistic atmospheric perspective and natural color grading.",
+      "A serene forest with sunlight filtering through trees, showing realistic shadows, depth, and natural movement of leaves in the breeze.",
+      "A coastal scene with crashing waves, realistic water physics, and dynamic lighting that captures the mood of the ocean environment."
+    ],
+    "evaluation_focus": [
+      "spatial_consistency",
+      "lighting_realism",
+      "environmental_detail",
+      "atmospheric_effects"
+    ]
+  },
+  "action": {
+    "description": "Evaluation prompts for action and motion videos",
+    "prompts": [
+      "A high-speed car chase through urban streets with realistic motion blur, camera movement, and smooth transitions between action sequences.",
+      "A martial arts demonstration with fluid human movements, realistic physics, and consistent body proportions throughout the sequence.",
+      "A sports highlight reel showing dynamic athletic movements, realistic physics, and smooth camera work that captures the energy of the moment."
+    ],
+    "evaluation_focus": [
+      "motion_smoothness",
+      "spatial_coherence",
+      "temporal_consistency",
+      "action_clarity"
+    ]
+  },
+  "object": {
+    "description": "Evaluation prompts for object-focused videos",
+    "prompts": [
+      "A detailed close-up of a vintage mechanical watch, showing intricate gears, realistic textures, and consistent lighting across all frames.",
+      "A product demonstration video with stable camera work, consistent object appearance, and clear visibility of product features.",
+      "A cooking tutorial showing detailed food preparation with realistic textures, consistent lighting, and clear step-by-step progression."
+    ],
+    "evaluation_focus": [
+      "object_consistency",
+      "texture_detail",
+      "lighting_stability",
+      "spatial_stability"
+    ]
+  },
+  "human_activity": {
+    "description": "Evaluation prompts for human activity videos",
+    "prompts": [
+      "A person giving a presentation with natural facial expressions, consistent appearance, and realistic body language throughout the video.",
+      "A cooking demonstration showing detailed hand movements, realistic interactions with kitchen objects, and consistent human anatomy.",
+      "A dance performance with fluid movements, realistic physics, and consistent human proportions across all frames."
+    ],
+    "evaluation_focus": [
+      "human_anatomy",
+      "motion_naturalness",
+      "object_interaction",
+      "facial_consistency"
+    ]
+  }
+}

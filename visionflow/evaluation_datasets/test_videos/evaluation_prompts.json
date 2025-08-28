@@ -1,0 +1,29 @@
+{
+  "nature_landscape": {
+    "prompt": "A serene mountain landscape with flowing water, showing realistic natural lighting, atmospheric effects, and smooth motion. The scene should maintain spatial consistency and natural color grading throughout.",
+    "evaluation_criteria": [
+      "spatial_consistency",
+      "lighting_realism",
+      "motion_smoothness",
+      "color_naturalness"
+    ]
+  },
+  "urban_scene": {
+    "prompt": "An urban cityscape with people and vehicles in motion, showing realistic urban dynamics, consistent object tracking, and natural movement patterns. The scene should maintain temporal coherence.",
+    "evaluation_criteria": [
+      "motion_consistency",
+      "object_tracking",
+      "scene_complexity",
+      "temporal_coherence"
+    ]
+  },
+  "object_detail": {
+    "prompt": "A close-up view of a mechanical object with intricate details, showing consistent lighting, stable camera work, and clear visibility of fine features. The object should maintain spatial stability.",
+    "evaluation_criteria": [
+      "texture_detail",
+      "spatial_stability",
+      "lighting_consistency",
+      "focus_stability"
+    ]
+  }
+}

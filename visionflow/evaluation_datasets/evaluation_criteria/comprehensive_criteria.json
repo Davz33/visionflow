@@ -1,0 +1,105 @@
+{
+  "technical_quality": {
+    "description": "Technical aspects of video generation quality",
+    "metrics": {
+      "spatial_consistency": {
+        "description": "Consistency of objects and scenes across frames",
+        "evaluation_method": "LPIPS, FVMD",
+        "scale": "0-1 (lower is better)",
+        "thresholds": {
+          "excellent": "0.0-0.2",
+          "good": "0.2-0.4",
+          "acceptable": "0.4-0.6",
+          "poor": "0.6+"
+        }
+      },
+      "temporal_smoothness": {
+        "description": "Smoothness of motion and transitions",
+        "evaluation_method": "FVMD, optical flow analysis",
+        "scale": "0-1 (lower is better)",
+        "thresholds": {
+          "excellent": "0.0-0.15",
+          "good": "0.15-0.3",
+          "acceptable": "0.3-0.5",
+          "poor": "0.5+"
+        }
+      },
+      "flicker_detection": {
+        "description": "Detection of temporal flickering artifacts",
+        "evaluation_method": "Temporal consistency analysis",
+        "scale": "0-1 (lower is better)",
+        "thresholds": {
+          "excellent": "0.0-0.1",
+          "good": "0.1-0.25",
+          "acceptable": "0.25-0.4",
+          "poor": "0.4+"
+        }
+      }
+    }
+  },
+  "semantic_quality": {
+    "description": "Semantic understanding and alignment with prompts",
+    "metrics": {
+      "prompt_alignment": {
+        "description": "How well the video matches the text prompt",
+        "evaluation_method": "CLIP, ViCLIP",
+        "scale": "0-1 (higher is better)",
+        "thresholds": {
+          "excellent": "0.8+",
+          "good": "0.6-0.8",
+          "acceptable": "0.4-0.6",
+          "poor": "0.0-0.4"
+        }
+      },
+      "object_consistency": {
+        "description": "Consistency of objects and their properties",
+        "evaluation_method": "Object tracking, feature matching",
+        "scale": "0-1 (higher is better)",
+        "thresholds": {
+          "excellent": "0.9+",
+          "good": "0.7-0.9",
+          "acceptable": "0.5-0.7",
+          "poor": "0.0-0.5"
+        }
+      },
+      "scene_understanding": {
+        "description": "Logical coherence of scene elements",
+        "evaluation_method": "ETVA questions, human evaluation",
+        "scale": "0-1 (higher is better)",
+        "thresholds": {
+          "excellent": "0.85+",
+          "good": "0.7-0.85",
+          "acceptable": "0.5-0.7",
+          "poor": "0.0-0.5"
+        }
+      }
+    }
+  },
+  "human_alignment": {
+    "description": "Alignment with human perception and preferences",
+    "metrics": {
+      "aesthetic_quality": {
+        "description": "Overall visual appeal and aesthetics",
+        "evaluation_method": "Human rating, aesthetic models",
+        "scale": "1-10 (higher is better)",
+        "thresholds": {
+          "excellent": "8-10",
+          "good": "6-8",
+          "acceptable": "4-6",
+          "poor": "1-4"
+        }
+      },
+      "realism": {
+        "description": "Perceived realism of generated content",
+        "evaluation_method": "Human evaluation, realism models",
+        "scale": "0-1 (higher is better)",
+        "thresholds": {
+          "excellent": "0.8+",
+          "good": "0.6-0.8",
+          "acceptable": "0.4-0.6",
+          "poor": "0.0-0.4"
+        }
+      }
+    }
+  }
+}

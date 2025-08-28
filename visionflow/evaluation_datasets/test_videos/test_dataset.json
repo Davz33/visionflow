@@ -1,0 +1,12 @@
+{
+  "metadata": {
+    "name": "Test Video Evaluation Dataset",
+    "description": "Short test videos for evaluating video generation quality assessment",
+    "created_at": "2025-08-28T10:51:57",
+    "total_videos": 0,
+    "successful_downloads": 0,
+    "target_duration": "10 seconds or less",
+    "purpose": "Testing evaluation system with real video content"
+  },
+  "videos": []
+}
