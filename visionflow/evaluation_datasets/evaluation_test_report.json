@@ -1,7 +1,7 @@
 {
   "metadata": {
     "test_name": "Existing Videos Evaluation Test",
-    "timestamp": 156755.834382458,
+    "timestamp": 156885.2333225,
     "total_videos": 4,
     "successful_evaluations": 4,
     "failed_evaluations": 0
@@ -9,7 +9,7 @@
   "summary": {
     "average_overall_score": 0.45924509843358774,
     "average_confidence": 0.8296811507650751,
-    "average_evaluation_time": 0.07745802402496338,
+    "average_evaluation_time": 0.07942545413970947,
     "success_rate": 1.0
   },
   "results": [
@@ -29,7 +29,7 @@
         "aesthetic_quality": 0.0,
         "narrative_flow": 0.0
       },
-      "evaluation_time": 0.036520957946777344,
+      "evaluation_time": 0.03630876541137695,
       "frames_evaluated": 10
     },
     {
@@ -48,7 +48,7 @@
         "aesthetic_quality": 0.0,
         "narrative_flow": 0.0
       },
-      "evaluation_time": 0.06741809844970703,
+      "evaluation_time": 0.07238507270812988,
       "frames_evaluated": 10
     },
     {
@@ -67,7 +67,7 @@
         "aesthetic_quality": 0.0,
         "narrative_flow": 0.0
       },
-      "evaluation_time": 0.08533287048339844,
+      "evaluation_time": 0.08915901184082031,
       "frames_evaluated": 10
     },
     {
@@ -86,7 +86,7 @@
         "aesthetic_quality": 0.0,
         "narrative_flow": 0.0
       },
-      "evaluation_time": 0.1205601692199707,
+      "evaluation_time": 0.11984896659851074,
       "frames_evaluated": 10
     }
   ],
