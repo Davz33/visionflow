@@ -1,0 +1,56 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "evaluation-dashboard.fullname" . }}
+  labels:
+    {{- include "evaluation-dashboard.labels" . | nindent 4 }}
+spec:
+  replicas: {{ .Values.replicaCount }}
+  selector:
+    matchLabels:
+      {{- include "evaluation-dashboard.selectorLabels" . | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        {{- include "evaluation-dashboard.selectorLabels" . | nindent 8 }}
+    spec:
+      containers:
+        - name: {{ .Chart.Name }}
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          command:
+            - /bin/sh
+            - -c
+            - |
+              # Wait for Grafana
+              sleep 30
+              
+              # Import dashboard
+              curl -X POST \
+                -H "Content-Type: application/json" \
+                -d @/dashboard/evaluation_dashboard.json \
+                http://{{ .Values.grafana.host }}:{{ .Values.grafana.port }}/api/dashboards/db \
+                -u {{ .Values.grafana.user }}:{{ .Values.grafana.password }}
+              
+              echo "Dashboard import completed"
+          volumeMounts:
+            - name: dashboard-volume
+              mountPath: /dashboard
+          resources:
+            {{- toYaml .Values.resources | nindent 12 }}
+      volumes:
+        - name: dashboard-volume
+          configMap:
+            name: {{ include "evaluation-dashboard.fullname" . }}-config
+      {{- with .Values.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
