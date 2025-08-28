@@ -1,0 +1,517 @@
+{
+  "dashboard": {
+    "id": null,
+    "title": "VisionFlow Video Evaluation Dashboard - Enhanced",
+    "tags": ["visionflow", "video-evaluation", "quality-assessment", "enhanced"],
+    "style": "dark",
+    "timezone": "browser",
+    "refresh": "30s",
+    "panels": [
+      {
+        "id": 1,
+        "title": "Evaluation Overview",
+        "type": "stat",
+        "targets": [
+          {
+            "expr": "count(visionflow_evaluations_total)",
+            "legendFormat": "Total Evaluations"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "color": {
+              "mode": "thresholds"
+            },
+            "thresholds": {
+              "steps": [
+                {"color": "green", "value": 0},
+                {"color": "yellow", "value": 100},
+                {"color": "red", "value": 500}
+              ]
+            },
+            "unit": "short"
+          }
+        },
+        "gridPos": {"h": 4, "w": 6, "x": 0, "y": 0}
+      },
+      {
+        "id": 2,
+        "title": "Success Rate",
+        "type": "gauge",
+        "targets": [
+          {
+            "expr": "rate(visionflow_evaluations_total{decision=\"auto_approve\"}[5m]) / rate(visionflow_evaluations_total[5m])",
+            "legendFormat": "Auto-Approval Rate"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "unit": "percentunit",
+            "min": 0,
+            "max": 1,
+            "thresholds": {
+              "steps": [
+                {"color": "red", "value": 0},
+                {"color": "yellow", "value": 0.7},
+                {"color": "green", "value": 0.9}
+              ]
+            }
+          }
+        },
+        "gridPos": {"h": 4, "w": 6, "x": 6, "y": 0}
+      },
+      {
+        "id": 3,
+        "title": "Average Quality Score",
+        "type": "gauge",
+        "targets": [
+          {
+            "expr": "avg(visionflow_evaluation_score)",
+            "legendFormat": "Average Score"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "unit": "percentunit",
+            "min": 0,
+            "max": 1,
+            "thresholds": {
+              "steps": [
+                {"color": "red", "value": 0},
+                {"color": "yellow", "value": 0.5},
+                {"color": "green", "value": 0.8}
+              ]
+            }
+          }
+        },
+        "gridPos": {"h": 4, "w": 6, "x": 12, "y": 0}
+      },
+      {
+        "id": 4,
+        "title": "Average Confidence",
+        "type": "gauge",
+        "targets": [
+          {
+            "expr": "avg(visionflow_evaluation_confidence)",
+            "legendFormat": "Average Confidence"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "unit": "percentunit",
+            "min": 0,
+            "max": 1,
+            "thresholds": {
+              "steps": [
+                {"color": "red", "value": 0},
+                {"color": "yellow", "value": 0.6},
+                {"color": "green", "value": 0.8}
+              ]
+            }
+          }
+        },
+        "gridPos": {"h": 4, "w": 6, "x": 18, "y": 0}
+      },
+      {
+        "id": 5,
+        "title": "Decision Distribution",
+        "type": "piechart",
+        "targets": [
+          {
+            "expr": "count by (decision) (visionflow_evaluations_total)",
+            "legendFormat": "{{decision}}"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "color": {
+              "mode": "palette-classic"
+            }
+          }
+        },
+        "gridPos": {"h": 8, "w": 12, "x": 0, "y": 4}
+      },
+      {
+        "id": 6,
+        "title": "Quality Scores Over Time",
+        "type": "timeseries",
+        "targets": [
+          {
+            "expr": "avg(visionflow_evaluation_score) by (instance)",
+            "legendFormat": "{{instance}}"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "color": {
+              "mode": "palette-classic"
+            },
+            "unit": "percentunit",
+            "min": 0,
+            "max": 1
+          }
+        },
+        "gridPos": {"h": 8, "w": 12, "x": 12, "y": 4}
+      },
+      {
+        "id": 7,
+        "title": "Processing Time Histogram",
+        "type": "heatmap",
+        "targets": [
+          {
+            "expr": "rate(visionflow_evaluation_duration_bucket[5m])",
+            "legendFormat": "{{le}}"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "color": {
+              "mode": "palette-classic"
+            },
+            "unit": "s"
+          }
+        },
+        "gridPos": {"h": 8, "w": 12, "x": 0, "y": 12}
+      },
+      {
+        "id": 8,
+        "title": "Confidence Levels Distribution",
+        "type": "barchart",
+        "targets": [
+          {
+            "expr": "count by (confidence_level) (visionflow_evaluation_confidence)",
+            "legendFormat": "{{confidence_level}}"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "color": {
+              "mode": "palette-classic"
+            }
+          }
+        },
+        "gridPos": {"h": 8, "w": 12, "x": 12, "y": 12}
+      },
+      {
+        "id": 9,
+        "title": "Dimension Scores Breakdown",
+        "type": "heatmap",
+        "targets": [
+          {
+            "expr": "avg(visionflow_evaluation_dimension_score) by (dimension)",
+            "legendFormat": "{{dimension}}"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "color": {
+              "mode": "palette-classic"
+            },
+            "unit": "percentunit",
+            "min": 0,
+            "max": 1
+          }
+        },
+        "gridPos": {"h": 8, "w": 12, "x": 0, "y": 20}
+      },
+      {
+        "id": 10,
+        "title": "Recent Evaluations",
+        "type": "table",
+        "targets": [
+          {
+            "expr": "topk(10, visionflow_evaluation_score)",
+            "legendFormat": "{{__name__}}"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "color": {
+              "mode": "thresholds"
+            },
+            "unit": "percentunit"
+          }
+        },
+        "gridPos": {"h": 8, "w": 12, "x": 12, "y": 20}
+      },
+      {
+        "id": 11,
+        "title": "Queue Status",
+        "type": "stat",
+        "targets": [
+          {
+            "expr": "visionflow_evaluation_queue_size",
+            "legendFormat": "Queue Size"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "color": {
+              "mode": "thresholds"
+            },
+            "thresholds": {
+              "steps": [
+                {"color": "green", "value": 0},
+                {"color": "yellow", "value": 10},
+                {"color": "red", "value": 50}
+              ]
+            },
+            "unit": "short"
+          }
+        },
+        "gridPos": {"h": 4, "w": 6, "x": 0, "y": 28}
+      },
+      {
+        "id": 12,
+        "title": "Human Review Required",
+        "type": "stat",
+        "targets": [
+          {
+            "expr": "count(visionflow_evaluations_total{decision=~\"queue_review|flag_monitoring\"})",
+            "legendFormat": "Pending Review"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "color": {
+              "mode": "thresholds"
+            },
+            "thresholds": {
+              "steps": [
+                {"color": "green", "value": 0},
+                {"color": "yellow", "value": 5},
+                {"color": "red", "value": 20}
+              ]
+            },
+            "unit": "short"
+          }
+        },
+        "gridPos": {"h": 4, "w": 6, "x": 6, "y": 28}
+      },
+      {
+        "id": 13,
+        "title": "Evaluation Performance Trend",
+        "type": "timeseries",
+        "targets": [
+          {
+            "expr": "rate(visionflow_evaluations_total[5m])",
+            "legendFormat": "Evaluations/sec"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "color": {
+              "mode": "palette-classic"
+            },
+            "unit": "reqps"
+          }
+        },
+        "gridPos": {"h": 8, "w": 12, "x": 12, "y": 28}
+      },
+      {
+        "id": 14,
+        "title": "Individual Video Details",
+        "type": "table",
+        "targets": [
+          {
+            "expr": "visionflow_evaluation_score",
+            "legendFormat": "{{filename}} - {{prompt}}"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "color": {
+              "mode": "thresholds"
+            },
+            "unit": "percentunit",
+            "custom": {
+              "displayMode": "table",
+              "align": "auto"
+            }
+          }
+        },
+        "gridPos": {"h": 8, "w": 24, "x": 0, "y": 36}
+      },
+      {
+        "id": 15,
+        "title": "Video Metadata Summary",
+        "type": "stat",
+        "targets": [
+          {
+            "expr": "count(visionflow_evaluations_total) by (source_dataset)",
+            "legendFormat": "{{source_dataset}}"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "color": {
+              "mode": "palette-classic"
+            },
+            "unit": "short"
+          }
+        },
+        "gridPos": {"h": 4, "w": 8, "x": 0, "y": 44}
+      },
+      {
+        "id": 16,
+        "title": "Average Processing Time by Category",
+        "type": "barchart",
+        "targets": [
+          {
+            "expr": "avg(visionflow_evaluation_duration) by (category)",
+            "legendFormat": "{{category}}"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "color": {
+              "mode": "palette-classic"
+            },
+            "unit": "s"
+          }
+        },
+        "gridPos": {"h": 8, "w": 8, "x": 8, "y": 44}
+      },
+      {
+        "id": 17,
+        "title": "Quality Score Distribution",
+        "type": "histogram",
+        "targets": [
+          {
+            "expr": "rate(visionflow_evaluation_score_bucket[5m])",
+            "legendFormat": "{{le}}"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "color": {
+              "mode": "palette-classic"
+            },
+            "unit": "percentunit"
+          }
+        },
+        "gridPos": {"h": 8, "w": 8, "x": 16, "y": 44}
+      },
+      {
+        "id": 18,
+        "title": "Quick Access - HTML Viewer",
+        "type": "text",
+        "options": {
+          "content": "## 🎬 Detailed Video Review Interface\n\nFor detailed individual video review with video playback, dimension scores, and human decision workflows, use our custom HTML viewer:\n\n**🔗 [Open HTML Viewer](./evaluation_viewer.html)**\n\n**Features:**\n- 📹 Video playback with controls\n- 📊 Detailed dimension scores\n- 🎯 Individual video metrics\n- 👥 Human review workflows\n- 📝 Prompt and metadata display\n- 🚦 Decision categorization\n\n**Use Cases:**\n- **Grafana**: High-level monitoring, trends, alerts\n- **HTML Viewer**: Individual video review, human decisions",
+          "mode": "markdown"
+        },
+        "gridPos": {"h": 8, "w": 24, "x": 0, "y": 52}
+      },
+      {
+        "id": 19,
+        "title": "Evaluation Workflow Status",
+        "type": "stat",
+        "targets": [
+          {
+            "expr": "visionflow_evaluation_worker_status",
+            "legendFormat": "Worker {{instance}}"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "color": {
+              "mode": "thresholds"
+            },
+            "thresholds": {
+              "steps": [
+                {"color": "red", "value": 0},
+                {"color": "green", "value": 1}
+              ]
+            },
+            "unit": "short"
+          }
+        },
+        "gridPos": {"h": 4, "w": 6, "x": 0, "y": 60}
+      },
+      {
+        "id": 20,
+        "title": "Throughput Metrics",
+        "type": "stat",
+        "targets": [
+          {
+            "expr": "visionflow_evaluation_throughput",
+            "legendFormat": "Videos/min"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "color": {
+              "mode": "thresholds"
+            },
+            "thresholds": {
+              "steps": [
+                {"color": "red", "value": 0},
+                {"color": "yellow", "value": 10},
+                {"color": "green", "value": 30}
+              ]
+            },
+            "unit": "short"
+          }
+        },
+        "gridPos": {"h": 4, "w": 6, "x": 6, "y": 60}
+      }
+    ],
+    "templating": {
+      "list": [
+        {
+          "name": "category",
+          "type": "query",
+          "query": "label_values(visionflow_evaluations_total, category)",
+          "refresh": 2,
+          "includeAll": true,
+          "multi": true
+        },
+        {
+          "name": "decision",
+          "type": "query",
+          "query": "label_values(visionflow_evaluations_total, decision)",
+          "refresh": 2,
+          "includeAll": true,
+          "multi": true
+        },
+        {
+          "name": "confidence_level",
+          "type": "query",
+          "query": "label_values(visionflow_evaluation_confidence, confidence_level)",
+          "refresh": 2,
+          "includeAll": true,
+          "multi": true
+        },
+        {
+          "name": "source_dataset",
+          "type": "query",
+          "query": "label_values(visionflow_evaluations_total, source_dataset)",
+          "refresh": 2,
+          "includeAll": true,
+          "multi": true
+        }
+      ]
+    },
+    "time": {
+      "from": "now-1h",
+      "to": "now"
+    },
+    "timepicker": {
+      "refresh_intervals": [
+        "5s",
+        "10s",
+        "30s",
+        "1m",
+        "5m",
+        "15m",
+        "30m",
+        "1h",
+        "2h",
+        "1d"
+      ]
+    },
+    "annotations": {
+      "list": []
+    }
+  }
+}

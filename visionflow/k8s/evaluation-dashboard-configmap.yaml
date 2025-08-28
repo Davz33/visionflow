@@ -2,7 +2,7 @@ apiVersion: v1
 kind: ConfigMap
 metadata:
   name: evaluation-dashboard-content
-  namespace: visionflow
+  namespace: visionflow-local
   labels:
     app: visionflow
     component: evaluation-dashboard
