@@ -12,7 +12,14 @@ from fastapi import FastAPI, HTTPException, BackgroundTasks
 from fastapi.middleware.cors import CORSMiddleware
 from prometheus_fastapi_instrumentator import Instrumentator
 
-from ..shared.monitoring import get_logger
+from ..shared.monitoring import (
+    get_logger, 
+    track_video_generation,
+    update_job_queue_length,
+    update_job_progress,
+    update_success_rate,
+    VIDEO_GENERATION_JOBS_ACTIVE
+)
 from ..shared.models import VideoGenerationRequest, VideoGenerationResult
 from ..services.evaluation.video_evaluation_orchestrator import VideoEvaluationOrchestrator, SamplingStrategy
 from ..services.generation.video_metadata_tracker import metadata_tracker
@@ -41,7 +48,17 @@ async def lifespan(app: FastAPI):
     # Initialize video generation service
     video_generation_service = WanVideoGenerationService()
     
-    logger.info("✅ VisionFlow API ready")
+    # Initialize metrics with default values to ensure they appear in /metrics
+    # Initialize for all quality levels
+    for quality in ["low", "medium", "high", "ultra"]:
+        VIDEO_GENERATION_JOBS_ACTIVE.labels(status="processing", quality=quality).set(0)
+        VIDEO_GENERATION_JOBS_ACTIVE.labels(status="completed", quality=quality).set(0)
+        VIDEO_GENERATION_JOBS_ACTIVE.labels(status="failed", quality=quality).set(0)
+        update_success_rate(quality, 1.0)
+    
+    update_job_queue_length(0)
+    
+    logger.info("✅ VisionFlow API ready with metrics initialized")
     
     yield
     
@@ -89,6 +106,14 @@ async def root():
             "health": "/health"
         }
     }
+
+@app.get("/metrics")
+async def metrics():
+    """Prometheus metrics endpoint"""
+    from prometheus_client import generate_latest, CONTENT_TYPE_LATEST
+    from fastapi.responses import Response
+    # Generate metrics from default registry (includes our custom metrics)
+    return Response(generate_latest(), media_type=CONTENT_TYPE_LATEST)
 
 @app.get("/health")
 async def health_check():
@@ -217,11 +242,25 @@ async def generate_video(request: VideoGenerationRequest):
     try:
         logger.info(f"🎬 Starting video generation: '{request.prompt[:50]}...'")
         
+        # Update metrics - job started
+        VIDEO_GENERATION_JOBS_ACTIVE.labels(status="processing", quality=request.quality.value).inc()
+        update_job_queue_length(1)  # Simple demo - in production, track actual queue
+        
         # Generate video using the WAN service
         result = await video_generation_service.generate_video(request)
         
         if result.get("status") == "failed":
+            # Update metrics - job failed
+            VIDEO_GENERATION_JOBS_ACTIVE.labels(status="processing", quality=request.quality.value).dec()
+            VIDEO_GENERATION_JOBS_ACTIVE.labels(status="failed", quality=request.quality.value).inc()
+            update_success_rate(request.quality.value, 0.0)
             raise HTTPException(status_code=500, detail=result.get("error", "Video generation failed"))
+        
+        # Update metrics - job succeeded
+        VIDEO_GENERATION_JOBS_ACTIVE.labels(status="processing", quality=request.quality.value).dec()
+        VIDEO_GENERATION_JOBS_ACTIVE.labels(status="completed", quality=request.quality.value).inc()
+        update_job_queue_length(0)
+        update_success_rate(request.quality.value, 1.0)
         
         # Return structured result
         return VideoGenerationResult(

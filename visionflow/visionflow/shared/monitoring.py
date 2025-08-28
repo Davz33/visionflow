@@ -1,5 +1,6 @@
 """Monitoring and observability utilities."""
 
+import asyncio
 import logging
 import time
 from contextlib import contextmanager
@@ -13,102 +14,89 @@ from prometheus_client.core import CollectorRegistry
 from .config import get_settings
 
 
-# Prometheus metrics
-REGISTRY = CollectorRegistry()
+# Prometheus metrics - use default registry for simplicity
+# REGISTRY = CollectorRegistry()
 
 # Request metrics
 REQUEST_COUNT = Counter(
     "visionflow_requests_total",
     "Total number of requests",
-    ["service", "method", "status"],
-    registry=REGISTRY
+    ["service", "method", "status"]
 )
 
 REQUEST_DURATION = Histogram(
     "visionflow_request_duration_seconds",
     "Request duration in seconds",
-    ["service", "method"],
-    registry=REGISTRY
+    ["service", "method"]
 )
 
 # Video generation metrics
 VIDEO_GENERATION_COUNT = Counter(
     "visionflow_videos_generated_total",
     "Total number of videos generated",
-    ["quality", "status"],
-    registry=REGISTRY
+    ["quality", "status"]
 )
 
 VIDEO_GENERATION_DURATION = Histogram(
     "visionflow_video_generation_duration_seconds",
     "Video generation duration in seconds",
-    ["quality"],
-    registry=REGISTRY
+    ["quality"]
 )
 
 # Enhanced job tracking metrics for monitoring dashboard
 VIDEO_GENERATION_JOBS_ACTIVE = Gauge(
     "visionflow_video_generation_jobs_active",
     "Number of currently active video generation jobs",
-    ["status", "quality"],
-    registry=REGISTRY
+    ["status", "quality"]
 )
 
 VIDEO_GENERATION_QUEUE_LENGTH = Gauge(
     "visionflow_video_generation_queue_length",
-    "Number of jobs waiting in queue",
-    registry=REGISTRY
+    "Number of jobs waiting in queue"
 )
 
 VIDEO_GENERATION_JOB_PROGRESS = Gauge(
     "visionflow_video_generation_job_progress",
     "Progress percentage of video generation jobs",
-    ["job_id", "status"],
-    registry=REGISTRY
+    ["job_id", "status"]
 )
 
 VIDEO_GENERATION_AVERAGE_WAIT_TIME = Histogram(
     "visionflow_video_generation_wait_time_seconds",
     "Time jobs spend waiting in queue",
-    ["quality"],
-    registry=REGISTRY
+    ["quality"]
 )
 
 VIDEO_GENERATION_SUCCESS_RATE = Gauge(
     "visionflow_video_generation_success_rate",
     "Success rate of video generation jobs (0-1)",
-    ["quality"],
-    registry=REGISTRY
+    ["quality"]
 )
 
 # Error metrics
 ERROR_COUNT = Counter(
     "visionflow_errors_total",
     "Total number of errors",
-    ["service", "error_type"],
-    registry=REGISTRY
+    ["service", "error_type"]
 )
 
 # Cache metrics
 CACHE_HITS = Counter(
     "visionflow_cache_hits_total",
     "Total number of cache hits",
-    ["cache_type"],
-    registry=REGISTRY
+    ["cache_type"]
 )
 
 CACHE_MISSES = Counter(
     "visionflow_cache_misses_total",
     "Total number of cache misses",
-    ["cache_type"],
-    registry=REGISTRY
+    ["cache_type"]
 )
 
 # Service info
 SERVICE_INFO = Info(
     "visionflow_service",
-    "Service information",
-    registry=REGISTRY
+    "Service information"
 )
 
 
@@ -152,7 +140,7 @@ def start_metrics_server() -> None:
     """Start Prometheus metrics server."""
     settings = get_settings()
     if settings.monitoring.enable_metrics:
-        start_http_server(settings.monitoring.prometheus_port, registry=REGISTRY)
+        start_http_server(settings.monitoring.prometheus_port)
 
 
 def track_request_metrics(service: str) -> Callable:

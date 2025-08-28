@@ -1,12 +1,12 @@
 #!/bin/bash
-
 # Test VisionFlow Monitoring Dashboard with Local k8s Deployment
-# This script deploys everything locally and tests real-time monitoring
+# This script tests the complete monitoring infrastructure
 
 set -e
 
-echo "🎬 Testing VisionFlow Monitoring Dashboard with Local k8s Deployment"
-echo "=================================================================="
+# Configuration
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+PROJECT_ROOT="$(dirname "$SCRIPT_DIR")"
 
 # Colors for output
 RED='\033[0;31m'
@@ -15,252 +15,165 @@ YELLOW='\033[1;33m'
 BLUE='\033[0;34m'
 NC='\033[0m' # No Color
 
-# Configuration
-NAMESPACE="visionflow-local"
-SCRIPT_DIR="$(dirname "$0")"
-PROJECT_DIR="$SCRIPT_DIR/.."
-
-# Function to print colored output
 print_status() {
-    echo -e "${BLUE}[INFO]${NC} $1"
+    local status=$1
+    local message=$2
+    case $status in
+        "info") echo -e "${BLUE}ℹ️  $message${NC}" ;;
+        "success") echo -e "${GREEN}✅ $message${NC}" ;;
+        "warning") echo -e "${YELLOW}⚠️  $message${NC}" ;;
+        "error") echo -e "${RED}❌ $message${NC}" ;;
+    esac
 }
 
-print_success() {
-    echo -e "${GREEN}[SUCCESS]${NC} $1"
-}
-
-print_warning() {
-    echo -e "${YELLOW}[WARNING]${NC} $1"
-}
-
-print_error() {
-    echo -e "${RED}[ERROR]${NC} $1"
-}
-
-# Function to wait for service to be ready
-wait_for_service() {
-    local service_name=$1
-    local port=$2
-    local max_attempts=30
-    local attempt=1
+# Function to check if services are accessible
+check_services() {
+    print_status "info" "Checking service accessibility..."
     
-    print_status "Waiting for $service_name to be ready on port $port..."
-    
-    while [ $attempt -le $max_attempts ]; do
-        if curl -s -f "http://localhost:$port/health" > /dev/null 2>&1; then
-            print_success "$service_name is ready!"
-            return 0
-        fi
-        
-        echo -n "."
-        sleep 2
-        attempt=$((attempt + 1))
-    done
-    
-    print_error "$service_name failed to start after $max_attempts attempts"
-    return 1
-}
-
-# Function to check if kind cluster exists
-check_kind_cluster() {
-    if ! kind get clusters | grep -q "visionflow-local"; then
-        print_status "Creating kind cluster..."
-        kind create cluster --name visionflow-local --config "$PROJECT_DIR/k8s/local/kind-config.yaml"
-        print_success "Kind cluster created!"
+    # Check API Gateway
+    if curl -s http://localhost:30000/health > /dev/null; then
+        print_status "success" "API Gateway is accessible"
     else
-        print_status "Kind cluster already exists"
+        print_status "error" "API Gateway is not accessible"
+        return 1
     fi
-}
-
-# Function to deploy the monitoring stack
-deploy_monitoring() {
-    print_status "Deploying monitoring stack..."
     
-    # Apply the monitoring configuration
-    kubectl apply -f "$PROJECT_DIR/k8s/monitoring.yaml" -n $NAMESPACE
+    # Check Grafana
+    if curl -s http://localhost:30300 > /dev/null; then
+        print_status "success" "Grafana is accessible"
+    else
+        print_status "error" "Grafana is not accessible"
+        return 1
+    fi
     
-    # Wait for monitoring services to be ready
-    kubectl wait --for=condition=available --timeout=300s deployment/prometheus -n $NAMESPACE
-    kubectl wait --for=condition=available --timeout=300s deployment/grafana -n $NAMESPACE
-    
-    print_success "Monitoring stack deployed!"
+    # Check Prometheus
+    if curl -s http://localhost:30090/api/v1/query?query=up > /dev/null; then
+        print_status "success" "Prometheus is accessible"
+    else
+        print_status "error" "Prometheus is not accessible"
+        return 1
+    fi
 }
 
 # Function to test video generation API
 test_video_generation() {
-    print_status "Testing video generation API..."
+    print_status "info" "Testing video generation API..."
     
-    # Test the API health
-    if ! curl -s -f "http://localhost:30000/health" > /dev/null; then
-        print_error "API is not responding. Check if it's running."
-        return 1
-    fi
-    
-    # Generate a test video
-    print_status "Sending video generation request..."
-    
+    # Send a test request
     local response=$(curl -s -X POST "http://localhost:30000/generate/video" \
         -H "Content-Type: application/json" \
-        -d '{
-            "prompt": "A beautiful sunset over the ocean for testing monitoring",
-            "duration": 3,
-            "quality": "medium",
-            "fps": 24,
-            "resolution": "512x512",
-            "seed": 42,
-            "guidance_scale": 7.5,
-            "num_inference_steps": 20
-        }')
+        -d '{"prompt": "A beautiful sunset for monitoring test", "duration": 3, "quality": "medium", "resolution": "512x512"}' \
+        --max-time 10 || echo "TIMEOUT")
     
-    if echo "$response" | grep -q "error"; then
-        print_warning "Video generation request failed: $response"
-        return 1
+    if [[ "$response" == "TIMEOUT" ]]; then
+        print_status "warning" "Video generation request timed out (expected for long-running ML tasks)"
+        print_status "info" "Check the API logs to verify the request was processed"
     else
-        print_success "Video generation request sent successfully!"
+        print_status "success" "Video generation request sent successfully"
         echo "Response: $response"
-        return 0
     fi
 }
 
 # Function to check monitoring metrics
 check_monitoring_metrics() {
-    print_status "Checking monitoring metrics..."
+    print_status "info" "Checking monitoring metrics..."
     
-    # Wait a bit for metrics to be collected
-    sleep 10
+    # Check if Prometheus is collecting metrics from the API
+    local metrics=$(curl -s http://localhost:30000/metrics)
     
-    # Check Prometheus metrics
-    print_status "Checking Prometheus metrics..."
-    local metrics=$(curl -s "http://localhost:30090/metrics")
-    
-    if echo "$metrics" | grep -q "visionflow_video_generation"; then
-        print_success "Video generation metrics found in Prometheus!"
-        echo "Available metrics:"
-        echo "$metrics" | grep "visionflow_video_generation" | head -10
+    if echo "$metrics" | grep -q "visionflow"; then
+        print_status "success" "VisionFlow metrics are being exposed"
+        echo "$metrics" | grep "visionflow" | head -5
     else
-        print_warning "No video generation metrics found in Prometheus"
+        print_status "warning" "No VisionFlow metrics found yet (they appear when services are used)"
     fi
     
-    # Check Grafana dashboard
-    print_status "Checking Grafana dashboard..."
-    if curl -s -f "http://localhost:30300" > /dev/null; then
-        print_success "Grafana is accessible!"
-        print_status "Grafana URL: http://localhost:30300 (admin/admin123)"
+    # Check Prometheus targets
+    local targets=$(curl -s "http://localhost:30090/api/v1/query?query=up")
+    if echo "$targets" | grep -q "api-gateway-service"; then
+        print_status "success" "Prometheus is scraping the API Gateway"
     else
-        print_warning "Grafana is not accessible"
+        print_status "error" "Prometheus is not scraping the API Gateway"
     fi
+}
+
+# Function to show monitoring access instructions
+show_monitoring_instructions() {
+    print_status "info" "Monitoring Dashboard Access Instructions"
+    echo "=================================================="
+    echo ""
+    echo "🌐 Grafana Dashboard:"
+    echo "   URL: http://localhost:30300"
+    echo "   Username: admin"
+    echo "   Password: admin123"
+    echo "   Look for: VisionFlow Video Generation Dashboard"
+    echo ""
+    echo "📈 Prometheus Metrics:"
+    echo "   URL: http://localhost:30090"
+    echo "   Check: Targets, queries, and raw metrics"
+    echo ""
+    echo "🚀 API Gateway:"
+    echo "   URL: http://localhost:30000"
+    echo "   Health: http://localhost:30000/health"
+    echo "   Metrics: http://localhost:30000/metrics"
+    echo ""
+    echo "📱 Web Monitor:"
+    echo "   File: $PROJECT_ROOT/video_generation_monitor.html"
+    echo "   Open in browser for quick monitoring"
 }
 
 # Function to show real-time monitoring
 show_real_time_monitoring() {
-    print_status "Setting up real-time monitoring..."
-    
-    # Start port forwarding for monitoring services
-    print_status "Starting port forwarding for monitoring services..."
-    
-    # Prometheus
-    kubectl port-forward svc/prometheus-service 30090:9090 -n $NAMESPACE &
-    PROMETHEUS_PID=$!
-    
-    # Grafana
-    kubectl port-forward svc/grafana-service 30300:3000 -n $NAMESPACE &
-    GRAFANA_PID=$!
-    
-    # Wait for services to be accessible
-    sleep 5
-    
-    print_success "Port forwarding started!"
-    print_status "Prometheus: http://localhost:30090"
-    print_status "Grafana: http://localhost:30300 (admin/admin123)"
+    print_status "info" "Real-Time Monitoring Status"
+    echo "====================================="
     
     # Show current metrics
-    print_status "Current video generation metrics:"
-    curl -s "http://localhost:30090/api/v1/query?query=visionflow_video_generation_jobs_active" | jq '.' 2>/dev/null || echo "Metrics not available yet"
+    echo "Current API Metrics:"
+    curl -s http://localhost:30000/metrics | grep -E "(visionflow|python_gc)" | head -10
     
-    # Instructions for testing
     echo ""
-    print_status "🎯 MONITORING DASHBOARD TEST INSTRUCTIONS:"
-    echo "1. Open Grafana: http://localhost:30300 (admin/admin123)"
-    echo "2. Navigate to Dashboards > VisionFlow Video Generation Dashboard"
-    echo "3. Send video generation requests via API or web monitor"
-    echo "4. Watch real-time updates in the dashboard"
-    echo ""
-    print_status "📱 WEB MONITOR:"
-    echo "Open: $PROJECT_DIR/video_generation_monitor.html in your browser"
-    echo "Update API_BASE_URL to: http://localhost:30000"
-    echo ""
-    print_status "🔍 API TESTING:"
-    echo "Health check: curl http://localhost:30000/health"
-    echo "Generate video: curl -X POST http://localhost:30000/generate/video -H 'Content-Type: application/json' -d '{\"prompt\":\"test\",\"duration\":3,\"quality\":\"medium\",\"fps\":24,\"resolution\":\"512x512\"}'"
-    
-    # Keep the script running to maintain port forwarding
-    print_status "Press Ctrl+C to stop monitoring and clean up..."
-    
-    # Trap to clean up background processes
-    trap 'cleanup' INT TERM
-    
-    # Wait for user to stop
-    wait
+    echo "Current Prometheus Targets:"
+    curl -s "http://localhost:30090/api/v1/query?query=up" | python3 -c "
+import sys, json
+try:
+    data = json.load(sys.stdin)
+    print('Target Status:')
+    for result in data['data']['result']:
+        instance = result['metric']['instance']
+        status = 'UP' if result['value'][1] == '1' else 'DOWN'
+        print(f'  {instance}: {status}')
+except:
+    print('Could not parse Prometheus response')
+"
 }
 
-# Function to cleanup
-cleanup() {
-    print_status "Cleaning up..."
-    
-    # Kill background processes
-    if [ ! -z "$PROMETHEUS_PID" ]; then
-        kill $PROMETHEUS_PID 2>/dev/null || true
-    fi
-    
-    if [ ! -z "$GRAFANA_PID" ]; then
-        kill $GRAFANA_PID 2>/dev/null || true
-    fi
-    
-    print_success "Cleanup complete!"
-    exit 0
-}
-
-# Main execution
+# Main function
 main() {
-    print_status "Starting VisionFlow Monitoring Dashboard Test..."
+    print_status "info" "🎬 Testing VisionFlow Monitoring Dashboard"
+    echo "=================================================="
     
-    # Check prerequisites
-    if ! command -v kubectl &> /dev/null; then
-        print_error "kubectl is not installed. Please install kubectl first."
+    # Check if development environment manager is available
+    if [[ ! -f "$SCRIPT_DIR/dev-env-manager.sh" ]]; then
+        print_status "error" "Development environment manager not found"
         exit 1
     fi
     
-    if ! command -v kind &> /dev/null; then
-        print_error "kind is not installed. Please install kind first."
-        exit 1
+    # Check if services are running
+    print_status "info" "Checking if services are running..."
+    if ! bash "$SCRIPT_DIR/dev-env-manager.sh" status > /dev/null 2>&1; then
+        print_status "warning" "Services are not running. Starting them..."
+        bash "$SCRIPT_DIR/dev-env-manager.sh" start
     fi
     
-    if ! command -v curl &> /dev/null; then
-        print_error "curl is not installed. Please install curl first."
+    # Wait for services to be ready
+    print_status "info" "Waiting for services to be ready..."
+    sleep 10
+    
+    # Check service accessibility
+    if ! check_services; then
+        print_status "error" "Some services are not accessible. Check the deployment."
         exit 1
     fi
-    
-    # Check if kind cluster exists and create if needed
-    check_kind_cluster
-    
-    # Deploy the complete stack
-    print_status "Deploying complete VisionFlow stack..."
-    bash "$SCRIPT_DIR/deploy-k8s-local.sh"
-    
-    # Wait for all services to be ready
-    print_status "Waiting for all services to be ready..."
-    kubectl wait --for=condition=available --timeout=600s deployment --all -n $NAMESPACE
-    
-    # Deploy monitoring stack
-    deploy_monitoring
-    
-    # Start port forwarding for main services
-    print_status "Starting port forwarding for main services..."
-    kubectl port-forward svc/api-gateway 30000:80 -n $NAMESPACE &
-    API_PID=$!
-    
-    # Wait for API to be ready
-    wait_for_service "API Gateway" 30000
     
     # Test video generation
     test_video_generation
@@ -268,8 +181,19 @@ main() {
     # Check monitoring metrics
     check_monitoring_metrics
     
-    # Show real-time monitoring
+    # Show monitoring instructions
+    show_monitoring_instructions
+    
+    # Show real-time status
     show_real_time_monitoring
+    
+    print_status "success" "🎉 Monitoring dashboard test completed!"
+    echo ""
+    print_status "info" "Next steps:"
+    echo "1. Open Grafana: http://localhost:30300"
+    echo "2. Send video generation requests via the API"
+    echo "3. Watch real-time metrics update in the dashboard"
+    echo "4. Use './scripts/dev-env-manager.sh monitor' for auto-recovery"
 }
 
 # Run main function

@@ -459,6 +459,8 @@ spec:
             configMapKeyRef:
               name: visionflow-config-local
               key: VERTEX_AI_PROJECT
+        - name: ENABLE_PROMETHEUS
+          value: "true"
         volumeMounts:
         - name: models-volume
           mountPath: /app/models
@@ -1063,8 +1065,10 @@ spec:
         ports:
         - containerPort: 3000
         env:
+        - name: GF_SECURITY_ADMIN_USER
+          value: "admin"
         - name: GF_SECURITY_ADMIN_PASSWORD
-          value: admin
+          value: "admin"
         - name: GF_USERS_ALLOW_SIGN_UP
           value: "false"
         volumeMounts:

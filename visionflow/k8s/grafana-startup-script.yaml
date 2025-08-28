@@ -1,0 +1,26 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: grafana-startup-script
+  namespace: visionflow-local
+data:
+  start-grafana.sh: |
+    #!/bin/sh
+    # Start Grafana in background
+    /run.sh &
+    GRAFANA_PID=$!
+    
+    # Wait for Grafana to be ready
+    echo "Waiting for Grafana to start..."
+    until curl -s http://localhost:3000/api/health > /dev/null; do
+        sleep 2
+    done
+    
+    echo "Grafana is ready, importing dashboard..."
+    sleep 5
+    
+    # Import the dashboard
+    python3 /usr/local/bin/import_dashboard.py
+    
+    # Wait for Grafana process
+    wait $GRAFANA_PID

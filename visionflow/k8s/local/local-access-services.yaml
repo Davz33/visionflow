@@ -1,0 +1,147 @@
+---
+# Local Development Access Services
+# These services expose all VisionFlow services on fixed ports for easy local access
+# No port forwarding needed!
+
+apiVersion: v1
+kind: Service
+metadata:
+  name: local-api-gateway
+  namespace: visionflow-local
+  labels:
+    app: local-access
+    service: api-gateway
+spec:
+  type: NodePort
+  selector:
+    app: api-gateway
+  ports:
+  - port: 8000
+    targetPort: 8000
+    nodePort: 30000
+    name: http
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: local-grafana
+  namespace: visionflow-local
+  labels:
+    app: local-access
+    service: grafana
+spec:
+  type: NodePort
+  selector:
+    app: grafana
+  ports:
+  - port: 3000
+    targetPort: 3000
+    nodePort: 30300
+    name: http
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: local-prometheus
+  namespace: visionflow-local
+  labels:
+    app: local-access
+    service: prometheus
+spec:
+  type: NodePort
+  selector:
+    app: prometheus
+  ports:
+  - port: 9090
+    targetPort: 9090
+    nodePort: 30090
+    name: http
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: local-generation-service
+  namespace: visionflow-local
+  labels:
+    app: local-access
+    service: generation
+spec:
+  type: NodePort
+  selector:
+    app: generation-service
+  ports:
+  - port: 8002
+    targetPort: 8002
+    nodePort: 30002
+    name: http
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: local-orchestration-service
+  namespace: visionflow-local
+  labels:
+    app: local-access
+    service: orchestration
+spec:
+  type: NodePort
+  selector:
+    app: orchestration-service
+  ports:
+  - port: 8001
+    targetPort: 8001
+    nodePort: 30001
+    name: http
+---
+# Ingress for unified access (optional - requires ingress controller)
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: visionflow-local-ingress
+  namespace: visionflow-local
+  labels:
+    app: local-access
+  annotations:
+    nginx.ingress.kubernetes.io/rewrite-target: /
+    nginx.ingress.kubernetes.io/ssl-redirect: "false"
+spec:
+  ingressClassName: nginx
+  rules:
+  - host: visionflow.local
+    http:
+      paths:
+      - path: /api
+        pathType: Prefix
+        backend:
+          service:
+            name: local-api-gateway
+            port:
+              number: 8000
+      - path: /grafana
+        pathType: Prefix
+        backend:
+          service:
+            name: local-grafana
+            port:
+              number: 3000
+      - path: /prometheus
+        pathType: Prefix
+        backend:
+          service:
+            name: local-prometheus
+            port:
+              number: 9090
+      - path: /generation
+        pathType: Prefix
+        backend:
+          service:
+            name: local-generation-service
+            port:
+              number: 8002
+      - path: /orchestration
+        pathType: Prefix
+        backend:
+          service:
+            name: local-orchestration-service
+            port:
+              number: 8001
