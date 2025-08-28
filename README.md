@@ -152,7 +152,7 @@ VisionFlow is a production-ready platform for AI-powered video generation and au
 1. **Clone the repository**
    ```bash
    git clone https://github.com/Davz33/visionflow
-   cd wan-open-eval
+   cd visionflow
    ```
 
 2. **Set up environment variables**
