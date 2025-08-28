@@ -1,0 +1,41 @@
+# Evaluation Metrics Configuration
+# Add this to your environment or config file
+
+# Metrics Server Configuration
+EVALUATION_METRICS_ENABLED=true
+EVALUATION_METRICS_PORT=9091
+EVALUATION_METRICS_HOST=0.0.0.0
+
+# Metrics Collection Settings
+EVALUATION_METRICS_INTERVAL=15s
+EVALUATION_METRICS_RETENTION=24h
+
+# Prometheus Scrape Configuration
+# Add this to your prometheus.yml:
+
+scrape_configs:
+  - job_name: 'visionflow-evaluation'
+    static_configs:
+      - targets: ['localhost:9091']
+    metrics_path: '/metrics'
+    scrape_interval: 15s
+    scrape_timeout: 10s
+    
+    # Relabeling rules for better metric names
+    relabel_configs:
+      - source_labels: [__address__]
+        target_label: instance
+        regex: '([^:]+)(?::\d+)?'
+        replacement: '${1}'
+      
+      - source_labels: [__name__]
+        target_label: metric_name
+        regex: 'visionflow_(.+)'
+        replacement: '${1}'
+
+# Grafana Dashboard Variables
+# These will be available in your evaluation dashboard:
+# - $category: Video category filter
+# - $decision: Evaluation decision filter  
+# - $confidence_level: Confidence level filter
+# - $sampling_strategy: Sampling strategy filter

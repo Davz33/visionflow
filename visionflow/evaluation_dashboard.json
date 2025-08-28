@@ -1,0 +1,359 @@
+{
+  "dashboard": {
+    "id": null,
+    "title": "VisionFlow Video Evaluation Dashboard",
+    "tags": ["visionflow", "video-evaluation", "quality-assessment"],
+    "style": "dark",
+    "timezone": "browser",
+    "refresh": "30s",
+    "panels": [
+      {
+        "id": 1,
+        "title": "Evaluation Overview",
+        "type": "stat",
+        "targets": [
+          {
+            "expr": "count(visionflow_evaluations_total)",
+            "legendFormat": "Total Evaluations"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "color": {
+              "mode": "thresholds"
+            },
+            "thresholds": {
+              "steps": [
+                {"color": "green", "value": 0},
+                {"color": "yellow", "value": 100},
+                {"color": "red", "value": 500}
+              ]
+            },
+            "unit": "short"
+          }
+        },
+        "gridPos": {"h": 4, "w": 6, "x": 0, "y": 0}
+      },
+      {
+        "id": 2,
+        "title": "Success Rate",
+        "type": "gauge",
+        "targets": [
+          {
+            "expr": "rate(visionflow_evaluations_total{decision=\"auto_approve\"}[5m]) / rate(visionflow_evaluations_total[5m])",
+            "legendFormat": "Auto-Approval Rate"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "unit": "percentunit",
+            "min": 0,
+            "max": 1,
+            "thresholds": {
+              "steps": [
+                {"color": "red", "value": 0},
+                {"color": "yellow", "value": 0.7},
+                {"color": "green", "value": 0.9}
+              ]
+            }
+          }
+        },
+        "gridPos": {"h": 4, "w": 6, "x": 6, "y": 0}
+      },
+      {
+        "id": 3,
+        "title": "Average Quality Score",
+        "type": "gauge",
+        "targets": [
+          {
+            "expr": "avg(visionflow_evaluation_score)",
+            "legendFormat": "Average Score"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "unit": "percentunit",
+            "min": 0,
+            "max": 1,
+            "thresholds": {
+              "steps": [
+                {"color": "red", "value": 0},
+                {"color": "yellow", "value": 0.5},
+                {"color": "green", "value": 0.8}
+              ]
+            }
+          }
+        },
+        "gridPos": {"h": 4, "w": 6, "x": 12, "y": 0}
+      },
+      {
+        "id": 4,
+        "title": "Average Confidence",
+        "type": "gauge",
+        "targets": [
+          {
+            "expr": "avg(visionflow_evaluation_confidence)",
+            "legendFormat": "Average Confidence"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "unit": "percentunit",
+            "min": 0,
+            "max": 1,
+            "thresholds": {
+              "steps": [
+                {"color": "red", "value": 0},
+                {"color": "yellow", "value": 0.6},
+                {"color": "green", "value": 0.8}
+              ]
+            }
+          }
+        },
+        "gridPos": {"h": 4, "w": 6, "x": 18, "y": 0}
+      },
+      {
+        "id": 5,
+        "title": "Evaluation Decisions Distribution",
+        "type": "piechart",
+        "targets": [
+          {
+            "expr": "count by (decision) (visionflow_evaluations_total)",
+            "legendFormat": "{{decision}}"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "color": {"mode": "palette-classic"}
+          }
+        },
+        "gridPos": {"h": 8, "w": 12, "x": 0, "y": 4}
+      },
+      {
+        "id": 6,
+        "title": "Quality Scores Over Time",
+        "type": "timeseries",
+        "targets": [
+          {
+            "expr": "avg(visionflow_evaluation_score) by (category)",
+            "legendFormat": "{{category}}"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "color": {"mode": "palette-classic"},
+            "custom": {
+              "lineWidth": 2,
+              "fillOpacity": 10
+            }
+          }
+        },
+        "gridPos": {"h": 8, "w": 12, "x": 12, "y": 4}
+      },
+      {
+        "id": 7,
+        "title": "Evaluation Processing Time",
+        "type": "histogram",
+        "targets": [
+          {
+            "expr": "visionflow_evaluation_duration_seconds_bucket",
+            "legendFormat": "{{le}}"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "unit": "s",
+            "color": {"mode": "palette-classic"}
+          }
+        },
+        "gridPos": {"h": 8, "w": 12, "x": 0, "y": 12}
+      },
+      {
+        "id": 8,
+        "title": "Confidence Levels Distribution",
+        "type": "barchart",
+        "targets": [
+          {
+            "expr": "count by (confidence_level) (visionflow_evaluations_total)",
+            "legendFormat": "{{confidence_level}}"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "color": {"mode": "palette-classic"}
+          }
+        },
+        "gridPos": {"h": 8, "w": 12, "x": 12, "y": 12}
+      },
+      {
+        "id": 9,
+        "title": "Dimension Scores Breakdown",
+        "type": "heatmap",
+        "targets": [
+          {
+            "expr": "avg(visionflow_evaluation_dimension_score) by (dimension, category)",
+            "legendFormat": "{{dimension}} - {{category}}"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "color": {"mode": "scheme"},
+            "custom": {
+              "hideFrom": {
+                "legend": false,
+                "tooltip": false,
+                "vis": false
+              }
+            }
+          }
+        },
+        "gridPos": {"h": 8, "w": 24, "x": 0, "y": 20}
+      },
+      {
+        "id": 10,
+        "title": "Recent Evaluations",
+        "type": "table",
+        "targets": [
+          {
+            "expr": "visionflow_evaluations_total",
+            "legendFormat": "{{__name__}}",
+            "format": "table"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "color": {"mode": "thresholds"},
+            "custom": {
+              "align": "auto",
+              "displayMode": "auto"
+            }
+          }
+        },
+        "gridPos": {"h": 8, "w": 24, "x": 0, "y": 28}
+      },
+      {
+        "id": 11,
+        "title": "Evaluation Queue Status",
+        "type": "stat",
+        "targets": [
+          {
+            "expr": "count(visionflow_evaluations_total{decision=\"flag_monitoring\"})",
+            "legendFormat": "Flagged for Monitoring"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "color": {"mode": "thresholds"},
+            "thresholds": {
+              "steps": [
+                {"color": "green", "value": 0},
+                {"color": "yellow", "value": 5},
+                {"color": "red", "value": 20}
+              ]
+            }
+          }
+        },
+        "gridPos": {"h": 4, "w": 6, "x": 0, "y": 36}
+      },
+      {
+        "id": 12,
+        "title": "Human Review Required",
+        "type": "stat",
+        "targets": [
+          {
+            "expr": "count(visionflow_evaluations_total{requires_review=\"true\"})",
+            "legendFormat": "Needs Human Review"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "color": {"mode": "thresholds"},
+            "thresholds": {
+              "steps": [
+                {"color": "green", "value": 0},
+                {"color": "yellow", "value": 3},
+                {"color": "red", "value": 10}
+              ]
+            }
+          }
+        },
+        "gridPos": {"h": 4, "w": 6, "x": 6, "y": 36}
+      },
+      {
+        "id": 13,
+        "title": "Evaluation Performance Trend",
+        "type": "timeseries",
+        "targets": [
+          {
+            "expr": "rate(visionflow_evaluations_total[5m])",
+            "legendFormat": "Evaluations per second"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "color": {"mode": "palette-classic"},
+            "custom": {
+              "lineWidth": 2,
+              "fillOpacity": 10
+            }
+          }
+        },
+        "gridPos": {"h": 8, "w": 12, "x": 12, "y": 36}
+      },
+      {
+        "id": 14,
+        "title": "Quality Score Distribution",
+        "type": "histogram",
+        "targets": [
+          {
+            "expr": "visionflow_evaluation_score_bucket",
+            "legendFormat": "{{le}}"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "unit": "percentunit",
+            "color": {"mode": "palette-classic"}
+          }
+        },
+        "gridPos": {"h": 8, "w": 12, "x": 0, "y": 44}
+      }
+    ],
+    "templating": {
+      "list": [
+        {
+          "name": "category",
+          "type": "query",
+          "query": "label_values(visionflow_evaluations_total, category)",
+          "refresh": 2,
+          "includeAll": true,
+          "multi": true
+        },
+        {
+          "name": "decision",
+          "type": "query",
+          "query": "label_values(visionflow_evaluations_total, decision)",
+          "refresh": 2,
+          "includeAll": true,
+          "multi": true
+        },
+        {
+          "name": "confidence_level",
+          "type": "query",
+          "query": "label_values(visionflow_evaluations_total, confidence_level)",
+          "refresh": 2,
+          "includeAll": true,
+          "multi": true
+        }
+      ]
+    },
+    "time": {
+      "from": "now-24h",
+      "to": "now"
+    },
+    "timepicker": {},
+    "annotations": {
+      "list": []
+    }
+  }
+}
