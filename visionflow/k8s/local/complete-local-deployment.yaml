@@ -1,0 +1,1232 @@
+# Complete local Kubernetes deployment that mirrors docker-compose.local.yml
+---
+# Namespace
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: visionflow-local
+  labels:
+    name: visionflow-local
+    environment: local
+
+---
+# ConfigMap for local environment
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: visionflow-config-local
+  namespace: visionflow-local
+data:
+  # Database
+  DB_HOST: "postgres-service"
+  DB_PORT: "5432"
+  DB_NAME: "visionflow"
+  
+  # Redis
+  REDIS_HOST: "redis-service"
+  REDIS_PORT: "6379"
+  
+  # MinIO (local S3)
+  STORAGE_ENDPOINT: "minio-service:9000"
+  STORAGE_ACCESS_KEY: "minio"
+  STORAGE_SECRET_KEY: "minio123"
+  STORAGE_BUCKET: "visionflow-local"
+  
+  # Environment
+  ENVIRONMENT: "local"
+  LOG_LEVEL: "debug"
+  API_HOST: "0.0.0.0"
+  API_PORT: "8000"
+  
+  # Model config
+  MODEL_DEVICE: "auto"
+  MODEL_CACHE_DIR: "/app/models"
+  WAN_MODEL_PATH: "multimodalart/wan2-1-fast"
+  MAX_CONCURRENT_GENERATIONS: "1"
+  
+  # Cloud config (for remote access)
+  VERTEX_AI_PROJECT: "visionflow-gcp-project"
+  VERTEX_AI_REGION: "us-central1"
+
+---
+# Secrets for local environment
+apiVersion: v1
+kind: Secret
+metadata:
+  name: visionflow-secrets-local
+  namespace: visionflow-local
+type: Opaque
+data:
+  DB_USER: dmlzaW9uZmxvdw==  # visionflow
+  DB_PASSWORD: dmlzaW9uZmxvd19sb2NhbA==  # visionflow_local
+  REDIS_PASSWORD: ""  # empty for local
+  HUGGINGFACE_TOKEN: aGZfUExBQ0VIT0xERVJfVE9LRU5fUkVQTEFDRV9XSVRIX1JFQUxfVE9LRU4=  # base64 placeholder encoded token
+
+---
+# PostgreSQL StatefulSet
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: postgres
+  namespace: visionflow-local
+spec:
+  serviceName: postgres-service
+  replicas: 1
+  selector:
+    matchLabels:
+      app: postgres
+  template:
+    metadata:
+      labels:
+        app: postgres
+    spec:
+      containers:
+      - name: postgres
+        image: postgres:15-alpine
+        ports:
+        - containerPort: 5432
+        env:
+        - name: POSTGRES_DB
+          valueFrom:
+            configMapKeyRef:
+              name: visionflow-config-local
+              key: DB_NAME
+        - name: POSTGRES_USER
+          valueFrom:
+            secretKeyRef:
+              name: visionflow-secrets-local
+              key: DB_USER
+        - name: POSTGRES_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: visionflow-secrets-local
+              key: DB_PASSWORD
+        - name: PGDATA
+          value: /var/lib/postgresql/data/pgdata
+        volumeMounts:
+        - name: postgres-storage
+          mountPath: /var/lib/postgresql/data
+        - name: init-scripts
+          mountPath: /docker-entrypoint-initdb.d
+          readOnly: true
+        resources:
+          requests:
+            memory: "256Mi"
+            cpu: "250m"
+          limits:
+            memory: "1Gi"
+            cpu: "500m"
+        livenessProbe:
+          exec:
+            command:
+            - pg_isready
+            - -U
+            - visionflow
+          initialDelaySeconds: 30
+          periodSeconds: 30
+          timeoutSeconds: 10
+          failureThreshold: 3
+        readinessProbe:
+          exec:
+            command:
+            - pg_isready
+            - -U
+            - visionflow
+          initialDelaySeconds: 5
+          periodSeconds: 10
+          timeoutSeconds: 5
+      volumes:
+      - name: init-scripts
+        configMap:
+          name: postgres-init-scripts
+          defaultMode: 0755
+  volumeClaimTemplates:
+  - metadata:
+      name: postgres-storage
+    spec:
+      accessModes: ["ReadWriteOnce"]
+      resources:
+        requests:
+          storage: 10Gi
+
+---
+# PostgreSQL Service
+apiVersion: v1
+kind: Service
+metadata:
+  name: postgres-service
+  namespace: visionflow-local
+spec:
+  selector:
+    app: postgres
+  ports:
+  - port: 5432
+    targetPort: 5432
+  type: ClusterIP
+
+---
+# Redis Deployment
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: redis
+  namespace: visionflow-local
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: redis
+  template:
+    metadata:
+      labels:
+        app: redis
+    spec:
+      containers:
+      - name: redis
+        image: redis:7-alpine
+        ports:
+        - containerPort: 6379
+        command:
+        - redis-server
+        - --appendonly
+        - "yes"
+        volumeMounts:
+        - name: redis-storage
+          mountPath: /data
+        resources:
+          requests:
+            memory: "128Mi"
+            cpu: "100m"
+          limits:
+            memory: "512Mi"
+            cpu: "300m"
+        livenessProbe:
+          exec:
+            command:
+            - redis-cli
+            - ping
+          initialDelaySeconds: 30
+          periodSeconds: 30
+          timeoutSeconds: 10
+          failureThreshold: 3
+        readinessProbe:
+          exec:
+            command:
+            - redis-cli
+            - ping
+          initialDelaySeconds: 5
+          periodSeconds: 10
+          timeoutSeconds: 5
+      volumes:
+      - name: redis-storage
+        persistentVolumeClaim:
+          claimName: redis-pvc
+
+---
+# Redis Service
+apiVersion: v1
+kind: Service
+metadata:
+  name: redis-service
+  namespace: visionflow-local
+spec:
+  selector:
+    app: redis
+  ports:
+  - port: 6379
+    targetPort: 6379
+  type: ClusterIP
+
+---
+# Redis PVC
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: redis-pvc
+  namespace: visionflow-local
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 2Gi
+
+---
+# MinIO Deployment
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: minio
+  namespace: visionflow-local
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: minio
+  template:
+    metadata:
+      labels:
+        app: minio
+    spec:
+      containers:
+      - name: minio
+        image: minio/minio:latest
+        ports:
+        - containerPort: 9000
+        - containerPort: 9001
+        command:
+        - minio
+        - server
+        - /data
+        - --console-address
+        - ":9001"
+        env:
+        - name: MINIO_ROOT_USER
+          valueFrom:
+            configMapKeyRef:
+              name: visionflow-config-local
+              key: STORAGE_ACCESS_KEY
+        - name: MINIO_ROOT_PASSWORD
+          valueFrom:
+            configMapKeyRef:
+              name: visionflow-config-local
+              key: STORAGE_SECRET_KEY
+        volumeMounts:
+        - name: minio-storage
+          mountPath: /data
+        resources:
+          requests:
+            memory: "256Mi"
+            cpu: "200m"
+          limits:
+            memory: "1Gi"
+            cpu: "500m"
+        livenessProbe:
+          httpGet:
+            path: /minio/health/live
+            port: 9000
+          initialDelaySeconds: 30
+          periodSeconds: 30
+          timeoutSeconds: 10
+          failureThreshold: 3
+        readinessProbe:
+          httpGet:
+            path: /minio/health/ready
+            port: 9000
+          initialDelaySeconds: 5
+          periodSeconds: 10
+          timeoutSeconds: 5
+      volumes:
+      - name: minio-storage
+        persistentVolumeClaim:
+          claimName: minio-pvc
+
+---
+# MinIO Service
+apiVersion: v1
+kind: Service
+metadata:
+  name: minio-service
+  namespace: visionflow-local
+spec:
+  selector:
+    app: minio
+  ports:
+  - name: api
+    port: 9000
+    targetPort: 9000
+  - name: console
+    port: 9001
+    targetPort: 9001
+    nodePort: 30901
+  type: NodePort
+
+---
+# MinIO PVC
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: minio-pvc
+  namespace: visionflow-local
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 20Gi
+
+---
+# API Gateway Deployment
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: api-gateway
+  namespace: visionflow-local
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: api-gateway
+  template:
+    metadata:
+      labels:
+        app: api-gateway
+    spec:
+      containers:
+      - name: api
+        image: visionflow-api:local
+        imagePullPolicy: Never  # Use local built image
+        ports:
+        - containerPort: 8000
+        env:
+        - name: ENVIRONMENT
+          valueFrom:
+            configMapKeyRef:
+              name: visionflow-config-local
+              key: ENVIRONMENT
+        - name: DB_HOST
+          valueFrom:
+            configMapKeyRef:
+              name: visionflow-config-local
+              key: DB_HOST
+        - name: DB_PORT
+          valueFrom:
+            configMapKeyRef:
+              name: visionflow-config-local
+              key: DB_PORT
+        - name: DB_NAME
+          valueFrom:
+            configMapKeyRef:
+              name: visionflow-config-local
+              key: DB_NAME
+        - name: DB_USER
+          valueFrom:
+            secretKeyRef:
+              name: visionflow-secrets-local
+              key: DB_USER
+        - name: DB_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: visionflow-secrets-local
+              key: DB_PASSWORD
+        - name: REDIS_HOST
+          valueFrom:
+            configMapKeyRef:
+              name: visionflow-config-local
+              key: REDIS_HOST
+        - name: REDIS_PORT
+          valueFrom:
+            configMapKeyRef:
+              name: visionflow-config-local
+              key: REDIS_PORT
+        - name: STORAGE_ENDPOINT
+          valueFrom:
+            configMapKeyRef:
+              name: visionflow-config-local
+              key: STORAGE_ENDPOINT
+        - name: STORAGE_ACCESS_KEY
+          valueFrom:
+            configMapKeyRef:
+              name: visionflow-config-local
+              key: STORAGE_ACCESS_KEY
+        - name: STORAGE_SECRET_KEY
+          valueFrom:
+            configMapKeyRef:
+              name: visionflow-config-local
+              key: STORAGE_SECRET_KEY
+        - name: STORAGE_BUCKET
+          valueFrom:
+            configMapKeyRef:
+              name: visionflow-config-local
+              key: STORAGE_BUCKET
+        - name: API_HOST
+          valueFrom:
+            configMapKeyRef:
+              name: visionflow-config-local
+              key: API_HOST
+        - name: API_PORT
+          valueFrom:
+            configMapKeyRef:
+              name: visionflow-config-local
+              key: API_PORT
+        - name: LOG_LEVEL
+          valueFrom:
+            configMapKeyRef:
+              name: visionflow-config-local
+              key: LOG_LEVEL
+        - name: VERTEX_AI_PROJECT
+          valueFrom:
+            configMapKeyRef:
+              name: visionflow-config-local
+              key: VERTEX_AI_PROJECT
+        volumeMounts:
+        - name: models-volume
+          mountPath: /app/models
+        - name: generated-volume
+          mountPath: /app/generated
+        - name: logs-volume
+          mountPath: /app/logs
+        resources:
+          requests:
+            memory: "512Mi"
+            cpu: "500m"
+          limits:
+            memory: "2Gi"
+            cpu: "1000m"
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: 8000
+          initialDelaySeconds: 30
+          periodSeconds: 30
+          timeoutSeconds: 10
+          failureThreshold: 3
+        readinessProbe:
+          httpGet:
+            path: /health
+            port: 8000
+          initialDelaySeconds: 5
+          periodSeconds: 10
+          timeoutSeconds: 5
+      volumes:
+      - name: models-volume
+        persistentVolumeClaim:
+          claimName: models-pvc
+      - name: generated-volume
+        persistentVolumeClaim:
+          claimName: generated-pvc
+      - name: logs-volume
+        persistentVolumeClaim:
+          claimName: logs-pvc
+
+---
+# API Gateway Service
+apiVersion: v1
+kind: Service
+metadata:
+  name: api-gateway-service
+  namespace: visionflow-local
+spec:
+  selector:
+    app: api-gateway
+  ports:
+  - port: 8000
+    targetPort: 8000
+    nodePort: 30000
+  type: NodePort
+
+---
+# Generation Service Deployment
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: generation-service
+  namespace: visionflow-local
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: generation-service
+  template:
+    metadata:
+      labels:
+        app: generation-service
+    spec:
+      containers:
+      - name: generation
+        image: visionflow-generation:local
+        imagePullPolicy: Never  # Use local built image
+        ports:
+        - containerPort: 8002
+        # Health service mode for now (ML will be added later)
+        # command: ["python", "-m", "visionflow.services.generation.standalone_service"]
+        env:
+        - name: ENVIRONMENT
+          valueFrom:
+            configMapKeyRef:
+              name: visionflow-config-local
+              key: ENVIRONMENT
+        - name: DB_HOST
+          valueFrom:
+            configMapKeyRef:
+              name: visionflow-config-local
+              key: DB_HOST
+        - name: DB_PORT
+          valueFrom:
+            configMapKeyRef:
+              name: visionflow-config-local
+              key: DB_PORT
+        - name: DB_NAME
+          valueFrom:
+            configMapKeyRef:
+              name: visionflow-config-local
+              key: DB_NAME
+        - name: DB_USER
+          valueFrom:
+            secretKeyRef:
+              name: visionflow-secrets-local
+              key: DB_USER
+        - name: DB_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: visionflow-secrets-local
+              key: DB_PASSWORD
+        - name: REDIS_HOST
+          valueFrom:
+            configMapKeyRef:
+              name: visionflow-config-local
+              key: REDIS_HOST
+        - name: REDIS_PORT
+          valueFrom:
+            configMapKeyRef:
+              name: visionflow-config-local
+              key: REDIS_PORT
+        - name: MODEL_DEVICE
+          valueFrom:
+            configMapKeyRef:
+              name: visionflow-config-local
+              key: MODEL_DEVICE
+        - name: MODEL_CACHE_DIR
+          valueFrom:
+            configMapKeyRef:
+              name: visionflow-config-local
+              key: MODEL_CACHE_DIR
+        - name: WAN_MODEL_PATH
+          valueFrom:
+            configMapKeyRef:
+              name: visionflow-config-local
+              key: WAN_MODEL_PATH
+        - name: MAX_CONCURRENT_GENERATIONS
+          valueFrom:
+            configMapKeyRef:
+              name: visionflow-config-local
+              key: MAX_CONCURRENT_GENERATIONS
+        - name: HUGGINGFACE_TOKEN
+          valueFrom:
+            secretKeyRef:
+              name: visionflow-secrets-local
+              key: HUGGINGFACE_TOKEN
+        volumeMounts:
+        - name: models-volume
+          mountPath: /app/models
+        - name: generated-volume
+          mountPath: /app/generated
+        - name: logs-volume
+          mountPath: /app/logs
+        resources:
+          requests:
+            memory: "2Gi"
+            cpu: "1000m"
+          limits:
+            memory: "8Gi"
+            cpu: "4000m"
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: 8002
+          initialDelaySeconds: 60
+          periodSeconds: 30
+          timeoutSeconds: 15
+          failureThreshold: 3
+        readinessProbe:
+          httpGet:
+            path: /health
+            port: 8002
+          initialDelaySeconds: 30
+          periodSeconds: 10
+          timeoutSeconds: 10
+      volumes:
+      - name: models-volume
+        persistentVolumeClaim:
+          claimName: models-pvc
+      - name: generated-volume
+        persistentVolumeClaim:
+          claimName: generated-pvc
+      - name: logs-volume
+        persistentVolumeClaim:
+          claimName: logs-pvc
+
+---
+# Generation Service Service
+apiVersion: v1
+kind: Service
+metadata:
+  name: generation-service
+  namespace: visionflow-local
+spec:
+  selector:
+    app: generation-service
+  ports:
+  - port: 8002
+    targetPort: 8002
+    nodePort: 30002
+  type: NodePort
+
+---
+# Orchestration Service Deployment
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: orchestration-service
+  namespace: visionflow-local
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: orchestration-service
+  template:
+    metadata:
+      labels:
+        app: orchestration-service
+    spec:
+      containers:
+      - name: orchestrator
+        image: visionflow-orchestrator:local
+        imagePullPolicy: Never  # Use local built image
+        ports:
+        - containerPort: 8001
+        env:
+        - name: ENVIRONMENT
+          valueFrom:
+            configMapKeyRef:
+              name: visionflow-config-local
+              key: ENVIRONMENT
+        - name: DB_HOST
+          valueFrom:
+            configMapKeyRef:
+              name: visionflow-config-local
+              key: DB_HOST
+        - name: DB_PORT
+          valueFrom:
+            configMapKeyRef:
+              name: visionflow-config-local
+              key: DB_PORT
+        - name: DB_NAME
+          valueFrom:
+            configMapKeyRef:
+              name: visionflow-config-local
+              key: DB_NAME
+        - name: DB_USER
+          valueFrom:
+            secretKeyRef:
+              name: visionflow-secrets-local
+              key: DB_USER
+        - name: DB_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: visionflow-secrets-local
+              key: DB_PASSWORD
+        - name: REDIS_HOST
+          valueFrom:
+            configMapKeyRef:
+              name: visionflow-config-local
+              key: REDIS_HOST
+        - name: REDIS_PORT
+          valueFrom:
+            configMapKeyRef:
+              name: visionflow-config-local
+              key: REDIS_PORT
+        - name: VERTEX_AI_PROJECT
+          valueFrom:
+            configMapKeyRef:
+              name: visionflow-config-local
+              key: VERTEX_AI_PROJECT
+        - name: VERTEX_AI_REGION
+          valueFrom:
+            configMapKeyRef:
+              name: visionflow-config-local
+              key: VERTEX_AI_REGION
+        volumeMounts:
+        - name: logs-volume
+          mountPath: /app/logs
+        resources:
+          requests:
+            memory: "512Mi"
+            cpu: "500m"
+          limits:
+            memory: "2Gi"
+            cpu: "1000m"
+      volumes:
+      - name: logs-volume
+        persistentVolumeClaim:
+          claimName: logs-pvc
+
+---
+# Orchestration Service Service
+apiVersion: v1
+kind: Service
+metadata:
+  name: orchestration-service
+  namespace: visionflow-local
+spec:
+  selector:
+    app: orchestration-service
+  ports:
+  - port: 8001
+    targetPort: 8001
+    nodePort: 30001
+  type: NodePort
+
+---
+# Celery Worker Deployment
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: celery-worker
+  namespace: visionflow-local
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: celery-worker
+  template:
+    metadata:
+      labels:
+        app: celery-worker
+    spec:
+      containers:
+      - name: worker
+        image: visionflow-api:local
+        imagePullPolicy: Never
+        command:
+        - celery
+        - -A
+        - visionflow.worker
+        - worker
+        - --loglevel=info
+        - --concurrency=2
+        env:
+        - name: ENVIRONMENT
+          valueFrom:
+            configMapKeyRef:
+              name: visionflow-config-local
+              key: ENVIRONMENT
+        - name: DB_HOST
+          valueFrom:
+            configMapKeyRef:
+              name: visionflow-config-local
+              key: DB_HOST
+        - name: DB_PORT
+          valueFrom:
+            configMapKeyRef:
+              name: visionflow-config-local
+              key: DB_PORT
+        - name: DB_NAME
+          valueFrom:
+            configMapKeyRef:
+              name: visionflow-config-local
+              key: DB_NAME
+        - name: DB_USER
+          valueFrom:
+            secretKeyRef:
+              name: visionflow-secrets-local
+              key: DB_USER
+        - name: DB_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: visionflow-secrets-local
+              key: DB_PASSWORD
+        - name: REDIS_HOST
+          valueFrom:
+            configMapKeyRef:
+              name: visionflow-config-local
+              key: REDIS_HOST
+        - name: REDIS_PORT
+          valueFrom:
+            configMapKeyRef:
+              name: visionflow-config-local
+              key: REDIS_PORT
+        - name: STORAGE_ENDPOINT
+          valueFrom:
+            configMapKeyRef:
+              name: visionflow-config-local
+              key: STORAGE_ENDPOINT
+        - name: STORAGE_ACCESS_KEY
+          valueFrom:
+            configMapKeyRef:
+              name: visionflow-config-local
+              key: STORAGE_ACCESS_KEY
+        - name: STORAGE_SECRET_KEY
+          valueFrom:
+            configMapKeyRef:
+              name: visionflow-config-local
+              key: STORAGE_SECRET_KEY
+        volumeMounts:
+        - name: models-volume
+          mountPath: /app/models
+        - name: logs-volume
+          mountPath: /app/logs
+        resources:
+          requests:
+            memory: "512Mi"
+            cpu: "500m"
+          limits:
+            memory: "2Gi"
+            cpu: "1000m"
+      volumes:
+      - name: models-volume
+        persistentVolumeClaim:
+          claimName: models-pvc
+      - name: logs-volume
+        persistentVolumeClaim:
+          claimName: logs-pvc
+
+---
+# Celery Beat Deployment
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: celery-beat
+  namespace: visionflow-local
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: celery-beat
+  template:
+    metadata:
+      labels:
+        app: celery-beat
+    spec:
+      containers:
+      - name: beat
+        image: visionflow-api:local
+        imagePullPolicy: Never
+        command:
+        - celery
+        - -A
+        - visionflow.worker
+        - beat
+        - --loglevel=info
+        - --pidfile=/tmp/celerybeat.pid
+        - --schedule=/tmp/celerybeat-schedule
+        env:
+        - name: ENVIRONMENT
+          valueFrom:
+            configMapKeyRef:
+              name: visionflow-config-local
+              key: ENVIRONMENT
+        - name: DB_HOST
+          valueFrom:
+            configMapKeyRef:
+              name: visionflow-config-local
+              key: DB_HOST
+        - name: DB_PORT
+          valueFrom:
+            configMapKeyRef:
+              name: visionflow-config-local
+              key: DB_PORT
+        - name: DB_NAME
+          valueFrom:
+            configMapKeyRef:
+              name: visionflow-config-local
+              key: DB_NAME
+        - name: DB_USER
+          valueFrom:
+            secretKeyRef:
+              name: visionflow-secrets-local
+              key: DB_USER
+        - name: DB_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: visionflow-secrets-local
+              key: DB_PASSWORD
+        - name: REDIS_HOST
+          valueFrom:
+            configMapKeyRef:
+              name: visionflow-config-local
+              key: REDIS_HOST
+        - name: REDIS_PORT
+          valueFrom:
+            configMapKeyRef:
+              name: visionflow-config-local
+              key: REDIS_PORT
+        - name: STORAGE_ENDPOINT
+          valueFrom:
+            configMapKeyRef:
+              name: visionflow-config-local
+              key: STORAGE_ENDPOINT
+        - name: STORAGE_ACCESS_KEY
+          valueFrom:
+            configMapKeyRef:
+              name: visionflow-config-local
+              key: STORAGE_ACCESS_KEY
+        - name: STORAGE_SECRET_KEY
+          valueFrom:
+            configMapKeyRef:
+              name: visionflow-config-local
+              key: STORAGE_SECRET_KEY
+        volumeMounts:
+        - name: logs-volume
+          mountPath: /app/logs
+        - name: celery-beat-volume
+          mountPath: /tmp
+        resources:
+          requests:
+            memory: "256Mi"
+            cpu: "200m"
+          limits:
+            memory: "512Mi"
+            cpu: "500m"
+      volumes:
+      - name: logs-volume
+        persistentVolumeClaim:
+          claimName: logs-pvc
+      - name: celery-beat-volume
+        persistentVolumeClaim:
+          claimName: celery-beat-pvc
+
+---
+# Prometheus Deployment
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: prometheus
+  namespace: visionflow-local
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: prometheus
+  template:
+    metadata:
+      labels:
+        app: prometheus
+    spec:
+      containers:
+      - name: prometheus
+        image: prom/prometheus:latest
+        ports:
+        - containerPort: 9090
+        args:
+        - '--config.file=/etc/prometheus/prometheus.yml'
+        - '--storage.tsdb.path=/prometheus'
+        - '--web.console.libraries=/etc/prometheus/console_libraries'
+        - '--web.console.templates=/etc/prometheus/consoles'
+        - '--web.enable-lifecycle'
+        volumeMounts:
+        - name: prometheus-config
+          mountPath: /etc/prometheus
+        - name: prometheus-storage
+          mountPath: /prometheus
+        resources:
+          requests:
+            memory: "256Mi"
+            cpu: "200m"
+          limits:
+            memory: "1Gi"
+            cpu: "500m"
+      volumes:
+      - name: prometheus-config
+        configMap:
+          name: prometheus-config
+      - name: prometheus-storage
+        persistentVolumeClaim:
+          claimName: prometheus-pvc
+
+---
+# Prometheus Service
+apiVersion: v1
+kind: Service
+metadata:
+  name: prometheus-service
+  namespace: visionflow-local
+spec:
+  selector:
+    app: prometheus
+  ports:
+  - port: 9090
+    targetPort: 9090
+    nodePort: 30090
+  type: NodePort
+
+---
+# Grafana Deployment
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: grafana
+  namespace: visionflow-local
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: grafana
+  template:
+    metadata:
+      labels:
+        app: grafana
+    spec:
+      containers:
+      - name: grafana
+        image: grafana/grafana:latest
+        ports:
+        - containerPort: 3000
+        env:
+        - name: GF_SECURITY_ADMIN_PASSWORD
+          value: admin
+        - name: GF_USERS_ALLOW_SIGN_UP
+          value: "false"
+        volumeMounts:
+        - name: grafana-storage
+          mountPath: /var/lib/grafana
+        resources:
+          requests:
+            memory: "256Mi"
+            cpu: "200m"
+          limits:
+            memory: "1Gi"
+            cpu: "500m"
+      volumes:
+      - name: grafana-storage
+        persistentVolumeClaim:
+          claimName: grafana-pvc
+
+---
+# Grafana Service
+apiVersion: v1
+kind: Service
+metadata:
+  name: grafana-service
+  namespace: visionflow-local
+spec:
+  selector:
+    app: grafana
+  ports:
+  - port: 3000
+    targetPort: 3000
+    nodePort: 30300
+  type: NodePort
+
+---
+# Persistent Volume Claims
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: models-pvc
+  namespace: visionflow-local
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 20Gi
+
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: generated-pvc
+  namespace: visionflow-local
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 10Gi
+
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: logs-pvc
+  namespace: visionflow-local
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 5Gi
+
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: celery-beat-pvc
+  namespace: visionflow-local
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 1Gi
+
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: prometheus-pvc
+  namespace: visionflow-local
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 10Gi
+
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: grafana-pvc
+  namespace: visionflow-local
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 5Gi
+
+---
+# ConfigMap for PostgreSQL init scripts
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: postgres-init-scripts
+  namespace: visionflow-local
+data:
+  init-db.sql: |
+    -- VisionFlow Database Initialization
+    CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
+    
+    -- Create basic tables if they don't exist
+    CREATE TABLE IF NOT EXISTS videos (
+        id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+        prompt TEXT NOT NULL,
+        model_version VARCHAR(50) DEFAULT 'wan2.1',
+        status VARCHAR(20) DEFAULT 'pending',
+        file_path TEXT,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        completed_at TIMESTAMP
+    );
+    
+    CREATE TABLE IF NOT EXISTS evaluations (
+        id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+        video_id UUID REFERENCES videos(id),
+        score FLOAT,
+        metrics JSONB,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    );
+
+---
+# ConfigMap for Prometheus config
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: prometheus-config
+  namespace: visionflow-local
+data:
+  prometheus.yml: |
+    global:
+      scrape_interval: 15s
+    
+    scrape_configs:
+      - job_name: 'visionflow-api'
+        static_configs:
+          - targets: ['api-gateway-service:8000']
+      - job_name: 'visionflow-generation'
+        static_configs:
+          - targets: ['generation-service:8002']
+      - job_name: 'visionflow-orchestration'
+        static_configs:
+          - targets: ['orchestration-service:8001']

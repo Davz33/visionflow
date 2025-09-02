@@ -1,0 +1,79 @@
+# Multi-stage minimal Docker build for orchestration service
+FROM python:3.11-slim as builder
+
+# Install build dependencies
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    build-essential \
+    git \
+    curl \
+    libpq-dev \
+    && rm -rf /var/lib/apt/lists/*
+
+# Create virtual environment
+RUN python -m venv /opt/venv
+ENV PATH="/opt/venv/bin:$PATH"
+
+# Install minimal Python dependencies
+COPY requirements.txt /tmp/requirements.txt
+RUN pip install --no-cache-dir --upgrade pip
+
+# Install only orchestration-related dependencies
+RUN pip install --no-cache-dir \
+    fastapi==0.104.1 \
+    uvicorn[standard]==0.24.0 \
+    pydantic==2.4.2 \
+    sqlalchemy==2.0.23 \
+    asyncpg==0.29.0 \
+    redis==5.0.1 \
+    celery==5.3.4 \
+    langchain==0.0.340 \
+    langchain-google-vertexai==0.0.3 \
+    google-cloud-aiplatform==1.38.0 \
+    prometheus-client==0.19.0
+
+# Production stage - minimal runtime
+FROM python:3.11-slim
+
+# Install only runtime dependencies
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    libpq5 \
+    curl \
+    && rm -rf /var/lib/apt/lists/* \
+    && apt-get clean
+
+# Copy virtual environment from builder
+COPY --from=builder /opt/venv /opt/venv
+ENV PATH="/opt/venv/bin:$PATH"
+
+# Set working directory
+WORKDIR /app
+
+# Copy only orchestration-related code
+COPY visionflow/services/orchestration/ /app/visionflow/services/orchestration/
+COPY visionflow/services/prompt/ /app/visionflow/services/prompt/
+COPY visionflow/services/intent/ /app/visionflow/services/intent/
+COPY visionflow/services/router/ /app/visionflow/services/router/
+COPY visionflow/shared/ /app/visionflow/shared/
+COPY visionflow/__init__.py /app/visionflow/
+
+# Create non-root user and necessary directories
+RUN mkdir -p /app/logs && \
+    useradd --create-home --shell /bin/bash --uid 1000 app && \
+    chown -R app:app /app
+
+USER app
+
+# Environment variables
+ENV PYTHONPATH=/app \
+    PYTHONUNBUFFERED=1 \
+    PYTHONDONTWRITEBYTECODE=1
+
+# Expose port
+EXPOSE 8001
+
+# Health check
+HEALTHCHECK --interval=30s --timeout=10s --start-period=30s --retries=3 \
+    CMD curl -f http://localhost:8001/health || exit 1
+
+# Run orchestration service
+CMD ["python", "-m", "visionflow.services.orchestration.service"]
