@@ -49,13 +49,18 @@ class SamplingStrategy(str, Enum):
     RANDOM_SAMPLE = "random_sample"               # Statistical sampling for large datasets
 
 class EvaluationDimension(str, Enum):
-    """6 key evaluation dimensions for video generation"""
+    """6 key evaluation dimensions for video generation + animation-specific dimensions"""
     VISUAL_QUALITY = "visual_quality"                    # clarity, sharpness
     PERCEPTUAL_QUALITY = "perceptual_quality"           # image similarity across frames
     MOTION_CONSISTENCY = "motion_consistency"           # motion smoothness, flickering
     TEXT_VIDEO_ALIGNMENT = "text_video_alignment"       # semantic and factual match
     AESTHETIC_QUALITY = "aesthetic_quality"             # factual and aesthetic consistency
     NARRATIVE_FLOW = "narrative_flow"                   # consistent narrative flow
+    
+    # Animation-specific quality dimensions (Test Scenario 1)
+    CHARACTER_CONSISTENCY = "character_consistency"     # character drift and consistency
+    TECHNICAL_ARTIFACTS = "technical_artifacts"         # generation failures and artifacts
+    ANIMATION_QUALITY = "animation_quality"             # overall animation quality
 
 @dataclass
 class FrameSample:
@@ -283,12 +288,15 @@ class VideoEvaluationOrchestrator:
         
         # Evaluation weights (: weighted reliability)
         self.dimension_weights = {
-            EvaluationDimension.VISUAL_QUALITY: 0.20,
-            EvaluationDimension.PERCEPTUAL_QUALITY: 0.18,
-            EvaluationDimension.MOTION_CONSISTENCY: 0.17,
-            EvaluationDimension.TEXT_VIDEO_ALIGNMENT: 0.16,
-            EvaluationDimension.AESTHETIC_QUALITY: 0.15,
-            EvaluationDimension.NARRATIVE_FLOW: 0.14
+            EvaluationDimension.VISUAL_QUALITY: 0.15,
+            EvaluationDimension.PERCEPTUAL_QUALITY: 0.14,
+            EvaluationDimension.MOTION_CONSISTENCY: 0.13,
+            EvaluationDimension.TEXT_VIDEO_ALIGNMENT: 0.12,
+            EvaluationDimension.AESTHETIC_QUALITY: 0.11,
+            EvaluationDimension.NARRATIVE_FLOW: 0.10,
+            # Animation-specific dimensions (Test Scenario 1)
+            EvaluationDimension.CHARACTER_CONSISTENCY: 0.15,
+            EvaluationDimension.TECHNICAL_ARTIFACTS: 0.10
         }
         
         # Confidence thresholds 
@@ -413,6 +421,13 @@ class VideoEvaluationOrchestrator:
             score, confidence = await self._evaluate_aesthetic_quality(frames, prompt)
         elif dimension == EvaluationDimension.NARRATIVE_FLOW:
             score, confidence = await self._evaluate_narrative_flow(frames, prompt)
+        # Animation-specific dimensions (Test Scenario 1)
+        elif dimension == EvaluationDimension.CHARACTER_CONSISTENCY:
+            score, confidence = await self._evaluate_character_consistency(frames, prompt)
+        elif dimension == EvaluationDimension.TECHNICAL_ARTIFACTS:
+            score, confidence = await self._evaluate_technical_artifacts(frames, prompt)
+        elif dimension == EvaluationDimension.ANIMATION_QUALITY:
+            score, confidence = await self._evaluate_animation_quality(frames, prompt)
         else:
             score, confidence = 0.5, 0.5  # Default fallback
             
@@ -635,3 +650,208 @@ class VideoEvaluationOrchestrator:
             return "queue_review", True, "high"
         else:  # CRITICAL
             return "immediate_review", True, "critical"
+    
+    # Animation-specific evaluation methods (Test Scenario 1)
+    
+    async def _evaluate_character_consistency(self, frames: List[FrameSample], prompt: str) -> Tuple[float, float]:
+        """Evaluate character consistency across frames using VLM analysis"""
+        try:
+            if len(frames) < 2:
+                return 0.5, 0.3  # Insufficient data
+            
+            # Extract frame data
+            frame_arrays = [frame.frame_data for frame in frames]
+            
+            # Character consistency analysis using frame comparison
+            consistency_scores = []
+            character_detected = False
+            
+            # Compare consecutive frames for character consistency
+            for i in range(len(frame_arrays) - 1):
+                frame1, frame2 = frame_arrays[i], frame_arrays[i + 1]
+                
+                # Calculate visual similarity (simplified approach)
+                similarity = self._calculate_frame_similarity(frame1, frame2)
+                consistency_scores.append(similarity)
+                
+                # Check for character presence (simplified)
+                if self._detect_character_presence(frame1):
+                    character_detected = True
+            
+            # Calculate overall consistency
+            if consistency_scores:
+                avg_consistency = sum(consistency_scores) / len(consistency_scores)
+            else:
+                avg_consistency = 0.5
+            
+            # Adjust score based on character detection
+            if not character_detected:
+                avg_consistency *= 0.7  # Penalty for no character detection
+            
+            # Calculate confidence based on number of frames and consistency variance
+            confidence = min(0.9, 0.5 + (len(frames) * 0.05))
+            if consistency_scores:
+                variance = np.var(consistency_scores)
+                confidence -= variance * 0.3  # Lower confidence for high variance
+            
+            return max(0.0, min(1.0, avg_consistency)), max(0.1, min(0.9, confidence))
+            
+        except Exception as e:
+            logger.error(f"Character consistency evaluation failed: {e}")
+            return 0.5, 0.3
+    
+    async def _evaluate_technical_artifacts(self, frames: List[FrameSample], prompt: str) -> Tuple[float, float]:
+        """Evaluate technical artifacts and generation failures"""
+        try:
+            if not frames:
+                return 0.5, 0.3
+            
+            artifact_scores = []
+            artifact_count = 0
+            
+            for frame in frames:
+                frame_data = frame.frame_data
+                
+                # Check for various types of artifacts
+                frame_artifacts = 0
+                
+                # 1. Resolution drop detection
+                if self._detect_resolution_drop(frame_data):
+                    frame_artifacts += 1
+                
+                # 2. Frame corruption detection
+                if self._detect_frame_corruption(frame_data):
+                    frame_artifacts += 1
+                
+                # 3. Blur detection
+                if self._detect_blur(frame_data):
+                    frame_artifacts += 0.5
+                
+                # 4. Noise detection
+                if self._detect_noise(frame_data):
+                    frame_artifacts += 0.5
+                
+                artifact_scores.append(max(0.0, 1.0 - frame_artifacts))
+                artifact_count += frame_artifacts
+            
+            # Calculate overall score (higher score = fewer artifacts)
+            if artifact_scores:
+                overall_score = sum(artifact_scores) / len(artifact_scores)
+            else:
+                overall_score = 0.5
+            
+            # Calculate confidence based on artifact detection consistency
+            confidence = 0.7
+            if artifact_count > 0:
+                confidence = max(0.3, 0.7 - (artifact_count / len(frames)) * 0.4)
+            
+            return overall_score, confidence
+            
+        except Exception as e:
+            logger.error(f"Technical artifacts evaluation failed: {e}")
+            return 0.5, 0.3
+    
+    async def _evaluate_animation_quality(self, frames: List[FrameSample], prompt: str) -> Tuple[float, float]:
+        """Evaluate overall animation quality combining multiple factors"""
+        try:
+            if not frames:
+                return 0.5, 0.3
+            
+            # Get character consistency and technical artifacts scores
+            char_score, char_conf = await self._evaluate_character_consistency(frames, prompt)
+            tech_score, tech_conf = await self._evaluate_technical_artifacts(frames, prompt)
+            
+            # Get motion consistency score
+            motion_score, motion_conf = await self._evaluate_motion_consistency(frames)
+            
+            # Calculate weighted average
+            weights = [0.4, 0.3, 0.3]  # character, technical, motion
+            scores = [char_score, tech_score, motion_score]
+            confidences = [char_conf, tech_conf, motion_conf]
+            
+            # Weighted score
+            weighted_score = sum(score * weight for score, weight in zip(scores, weights))
+            
+            # Weighted confidence
+            weighted_confidence = sum(conf * weight for conf, weight in zip(confidences, weights))
+            
+            return weighted_score, weighted_confidence
+            
+        except Exception as e:
+            logger.error(f"Animation quality evaluation failed: {e}")
+            return 0.5, 0.3
+    
+    def _calculate_frame_similarity(self, frame1: np.ndarray, frame2: np.ndarray) -> float:
+        """Calculate similarity between two frames"""
+        try:
+            # Convert to grayscale for comparison
+            gray1 = cv2.cvtColor(frame1, cv2.COLOR_BGR2GRAY)
+            gray2 = cv2.cvtColor(frame2, cv2.COLOR_BGR2GRAY)
+            
+            # Resize to same dimensions
+            h, w = min(gray1.shape[0], gray2.shape[0]), min(gray1.shape[1], gray2.shape[1])
+            gray1 = cv2.resize(gray1, (w, h))
+            gray2 = cv2.resize(gray2, (w, h))
+            
+            # Calculate structural similarity
+            from skimage.metrics import structural_similarity
+            ssim = structural_similarity(gray1, gray2)
+            return max(0.0, min(1.0, ssim))
+            
+        except Exception:
+            # Fallback to simple correlation
+            try:
+                corr = cv2.matchTemplate(gray1, gray2, cv2.TM_CCOEFF_NORMED)[0][0]
+                return max(0.0, min(1.0, (corr + 1) / 2))  # Normalize to 0-1
+            except Exception:
+                return 0.5
+    
+    def _detect_character_presence(self, frame: np.ndarray) -> bool:
+        """Detect if frame contains character-like objects (simplified)"""
+        try:
+            # Convert to grayscale
+            gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+            
+            # Detect faces (simplified character detection)
+            face_cascade = cv2.CascadeClassifier(cv2.data.haarcascades + 'haarcascade_frontalface_default.xml')
+            faces = face_cascade.detectMultiScale(gray, 1.1, 4)
+            
+            return len(faces) > 0
+            
+        except Exception:
+            # Fallback: check for high contrast areas (potential characters)
+            gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+            edges = cv2.Canny(gray, 50, 150)
+            edge_density = np.sum(edges > 0) / edges.size
+            return edge_density > 0.1
+    
+    def _detect_resolution_drop(self, frame: np.ndarray) -> bool:
+        """Detect if frame has unusually low resolution"""
+        height, width = frame.shape[:2]
+        return height < 256 or width < 256
+    
+    def _detect_frame_corruption(self, frame: np.ndarray) -> bool:
+        """Detect if frame appears corrupted"""
+        # Check for completely black or white frames
+        mean_intensity = np.mean(frame)
+        return mean_intensity < 10 or mean_intensity > 245
+    
+    def _detect_blur(self, frame: np.ndarray) -> bool:
+        """Detect if frame is blurry"""
+        try:
+            gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+            # Calculate Laplacian variance (blur detection)
+            laplacian_var = cv2.Laplacian(gray, cv2.CV_64F).var()
+            return laplacian_var < 100  # Threshold for blur detection
+        except Exception:
+            return False
+    
+    def _detect_noise(self, frame: np.ndarray) -> bool:
+        """Detect if frame has excessive noise"""
+        try:
+            gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+            # Calculate noise level using standard deviation
+            noise_level = np.std(gray)
+            return noise_level > 30  # Threshold for noise detection
+        except Exception:
+            return False
