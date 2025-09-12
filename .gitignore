@@ -117,3 +117,21 @@ docs/_build/
 *.zip
 visionflow-runpod*.zip
 wan_video_2045b4ec.mp4
+
+# Others
+.pre-commit-config.yaml
+TODO.models
+.cursor
+.cursorrules
+*_REPORT.md
+*_VERIFICATION.md
+*_GUIDE.md
+*_PLAN.md
+*_SUMMARY.md
+*_PROPOSAL.md
+_knowledge/
+*_removal.sh
+*_token.sh
+update_pyproject_history.sh
+AGENTS.md
+TODO.md
