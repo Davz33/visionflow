@@ -1,0 +1,80 @@
+version: '3.8'
+
+services:
+  # PostgreSQL Database
+  postgres:
+    image: postgres:16-alpine
+    container_name: visionflow-postgres-test
+    environment:
+      POSTGRES_DB: visionflow
+      POSTGRES_USER: visionflow_user
+      POSTGRES_PASSWORD: visionflow_pass
+      POSTGRES_INITDB_ARGS: "--encoding=UTF-8"
+    ports:
+      - "5433:5432"  # Different port to avoid conflict with local PostgreSQL
+    volumes:
+      - postgres_test_data:/var/lib/postgresql/data
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U visionflow_user -d visionflow"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # Redis for caching
+  redis:
+    image: redis:7-alpine
+    container_name: visionflow-redis-test
+    ports:
+      - "6380:6379"  # Different port to avoid conflict
+    volumes:
+      - redis_test_data:/data
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # VisionFlow API Service (simplified)
+  api:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.api
+    container_name: visionflow-api-test
+    environment:
+      # Database configuration
+      DATABASE_URL: postgresql://visionflow_user:visionflow_pass@postgres:5432/visionflow
+      
+      # Evaluation configuration
+      MAX_FRAMES_PER_VIDEO: "10"
+      SAMPLING_STRATEGY: "adaptive"
+      
+      # Resource limits (conservative for testing)
+      WAN_MAX_SYSTEM_RAM_GB: "4.0"
+      
+      # Monitoring
+      LOG_LEVEL: "info"
+    
+    ports:
+      - "8001:8000"  # Different port for testing
+    
+    volumes:
+      - ./generated:/app/generated
+      - ./logs:/app/logs
+    
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    
+    restart: unless-stopped
+
+volumes:
+  postgres_test_data:
+  redis_test_data:
+
+networks:
+  default:
+    name: visionflow-test

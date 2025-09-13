@@ -1,271 +1,196 @@
-# VisionFlow Infrastructure - Main Terraform Configuration
-# Provisions complete GCP infrastructure for VisionFlow platform
+# Minimal AWS EC2 + GPU Configuration for VisionFlow WAN2.1
+# This configuration only handles the bare AWS EC2 instance setup
 
 terraform {
   required_version = ">= 1.5"
   
   required_providers {
-    google = {
-      source  = "hashicorp/google"
+    aws = {
+      source  = "hashicorp/aws"
       version = "~> 5.0"
-    }
-    google-beta = {
-      source  = "hashicorp/google-beta"
-      version = "~> 5.0"
-    }
-    kubernetes = {
-      source  = "hashicorp/kubernetes"
-      version = "~> 2.23"
-    }
-    helm = {
-      source  = "hashicorp/helm"
-      version = "~> 2.11"
     }
   }
 
-  # Configure remote state backend
-  backend "gcs" {
-    bucket = "visionflow-terraform-state"
-    prefix = "terraform/state"
+  # Use local state for simplicity
+  backend "local" {
+    path = "terraform.tfstate"
   }
 }
 
-# Configure the Google Cloud Provider
-provider "google" {
-  project = var.project_id
-  region  = var.region
-  zone    = var.zone
-}
-
-provider "google-beta" {
-  project = var.project_id
-  region  = var.region
-  zone    = var.zone
+# Configure the AWS Provider
+provider "aws" {
+  region = var.aws_region
 }
 
 # Data sources
-data "google_client_config" "default" {}
-
-data "google_project" "project" {
-  project_id = var.project_id
+data "aws_availability_zones" "available" {
+  state = "available"
 }
 
-# Configure Kubernetes provider
-provider "kubernetes" {
-  host                   = "https://${module.gke.endpoint}"
-  token                  = data.google_client_config.default.access_token
-  cluster_ca_certificate = base64decode(module.gke.ca_certificate)
-}
+# Security Group for WAN2.1 Service
+resource "aws_security_group" "wan2_1_sg" {
+  name_prefix = "wan2-1-"
+  description = "Security group for WAN2.1 service"
+  vpc_id      = var.vpc_id
 
-# Configure Helm provider
-provider "helm" {
-  kubernetes {
-    host                   = "https://${module.gke.endpoint}"
-    token                  = data.google_client_config.default.access_token
-    cluster_ca_certificate = base64decode(module.gke.ca_certificate)
+  # SSH access
+  ingress {
+    from_port   = 22
+    to_port     = 22
+    protocol    = "tcp"
+    cidr_blocks = ["0.0.0.0/0"]
   }
+
+  # WAN2.1 API access
+  ingress {
+    from_port   = 8002
+    to_port     = 8002
+    protocol    = "tcp"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+
+  # All outbound traffic
+  egress {
+    from_port   = 0
+    to_port     = 0
+    protocol    = "-1"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+
+  tags = merge(var.tags, {
+    Name = "wan2-1-security-group"
+  })
 }
 
-# Local values
+# IAM Role for EC2 instance
+resource "aws_iam_role" "wan2_1_role" {
+  name = "wan2-1-ec2-role"
+
+  assume_role_policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Action = "sts:AssumeRole"
+        Effect = "Allow"
+        Principal = {
+          Service = "ec2.amazonaws.com"
+        }
+      }
+    ]
+  })
+
+  tags = var.tags
+}
+
+# IAM Policy for EC2 instance
+resource "aws_iam_role_policy" "wan2_1_policy" {
+  name = "wan2-1-ec2-policy"
+  role = aws_iam_role.wan2_1_role.id
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Effect = "Allow"
+        Action = [
+          "logs:CreateLogGroup",
+          "logs:CreateLogStream",
+          "logs:PutLogEvents",
+          "logs:DescribeLogStreams"
+        ]
+        Resource = "arn:aws:logs:*:*:*"
+      }
+    ]
+  })
+}
+
+# IAM Instance Profile
+resource "aws_iam_instance_profile" "wan2_1_profile" {
+  name = "wan2-1-ec2-profile"
+  role = aws_iam_role.wan2_1_role.name
+
+  tags = var.tags
+}
+
+# CloudWatch Log Group
+resource "aws_cloudwatch_log_group" "wan2_1_logs" {
+  name              = "/aws/ec2/wan2-1"
+  retention_in_days = 30
+
+  tags = var.tags
+}
+
+# User data script
 locals {
-  common_labels = {
-    project     = "visionflow"
-    environment = var.environment
-    managed_by  = "terraform"
+  user_data = base64encode(templatefile("${path.module}/user-data.sh", {
+    api_key = var.remote_wan_api_key
+  }))
+}
+
+# EC2 Instance
+resource "aws_instance" "wan2_1_instance" {
+  ami                    = var.aws_ami_id
+  instance_type          = var.aws_instance_type
+  key_name              = var.aws_key_pair_name
+  vpc_security_group_ids = [aws_security_group.wan2_1_sg.id]
+  subnet_id             = var.aws_subnet_id
+  iam_instance_profile  = aws_iam_instance_profile.wan2_1_profile.name
+
+  root_block_device {
+    volume_type = "gp3"
+    volume_size = var.volume_size
+    encrypted   = true
   }
-  
-  dns_zone_name = replace(var.domain, ".", "-")
+
+  user_data = local.user_data
+
+  tags = merge(var.tags, {
+    Name = "wan2-1-instance"
+  })
 }
 
-# Enable required APIs
-resource "google_project_service" "apis" {
-  for_each = toset([
-    "compute.googleapis.com",
-    "container.googleapis.com",
-    "storage.googleapis.com",
-    "cloudresourcemanager.googleapis.com",
-    "iam.googleapis.com",
-    "dns.googleapis.com",
-    "servicenetworking.googleapis.com",
-    "sqladmin.googleapis.com",
-    "secretmanager.googleapis.com",
-    "monitoring.googleapis.com",
-    "logging.googleapis.com",
-    "aiplatform.googleapis.com",
-    "cloudbuild.googleapis.com",
-    "artifactregistry.googleapis.com",
-    "redis.googleapis.com"
-  ])
+# Elastic IP
+resource "aws_eip" "wan2_1_eip" {
+  instance = aws_instance.wan2_1_instance.id
+  domain   = "vpc"
 
-  service = each.value
-  project = var.project_id
-
-  disable_dependent_services = false
-  disable_on_destroy         = false
+  tags = merge(var.tags, {
+    Name = "wan2-1-elastic-ip"
+  })
 }
 
-# Network Infrastructure
-module "vpc" {
-  source = "./modules/vpc"
-  
-  project_id   = var.project_id
-  region       = var.region
-  environment  = var.environment
-  
-  vpc_name                = var.vpc_name
-  subnet_name            = var.subnet_name
-  subnet_cidr            = var.subnet_cidr
-  secondary_ranges       = var.secondary_ranges
-  
-  labels = local.common_labels
-  
-  depends_on = [google_project_service.apis]
+# Outputs
+output "instance_id" {
+  description = "EC2 instance ID"
+  value       = aws_instance.wan2_1_instance.id
 }
 
-# IAM and Security
-module "iam" {
-  source = "./modules/iam"
-  
-  project_id  = var.project_id
-  environment = var.environment
-  
-  gke_cluster_name = var.cluster_name
-  
-  labels = local.common_labels
-  
-  depends_on = [google_project_service.apis]
+output "instance_public_ip" {
+  description = "EC2 instance public IP"
+  value       = aws_instance.wan2_1_instance.public_ip
 }
 
-# Cloud Storage
-module "storage" {
-  source = "./modules/storage"
-  
-  project_id  = var.project_id
-  region      = var.region
-  environment = var.environment
-  
-  media_bucket_name     = var.media_bucket_name
-  mlflow_bucket_name    = var.mlflow_bucket_name
-  terraform_bucket_name = var.terraform_bucket_name
-  
-  labels = local.common_labels
-  
-  depends_on = [google_project_service.apis]
+output "instance_private_ip" {
+  description = "EC2 instance private IP"
+  value       = aws_instance.wan2_1_instance.private_ip
 }
 
-# Database Infrastructure
-module "database" {
-  source = "./modules/database"
-  
-  project_id  = var.project_id
-  region      = var.region
-  environment = var.environment
-  
-  vpc_network_id = module.vpc.vpc_network_id
-  
-  postgres_instance_name = var.postgres_instance_name
-  postgres_version      = var.postgres_version
-  postgres_tier         = var.postgres_tier
-  
-  redis_instance_name = var.redis_instance_name
-  redis_memory_size   = var.redis_memory_size
-  redis_version       = var.redis_version
-  
-  labels = local.common_labels
-  
-  depends_on = [
-    google_project_service.apis,
-    module.vpc
-  ]
+output "elastic_ip" {
+  description = "Elastic IP address"
+  value       = aws_eip.wan2_1_eip.public_ip
 }
 
-# GKE Cluster
-module "gke" {
-  source = "./modules/gke"
-  
-  project_id  = var.project_id
-  region      = var.region
-  zone        = var.zone
-  environment = var.environment
-  
-  cluster_name          = var.cluster_name
-  network              = module.vpc.vpc_network_name
-  subnetwork           = module.vpc.subnet_name
-  pods_range_name      = "pods"
-  services_range_name  = "services"
-  
-  node_pools = var.node_pools
-  
-  service_account = module.iam.gke_service_account_email
-  
-  labels = local.common_labels
-  
-  depends_on = [
-    google_project_service.apis,
-    module.vpc,
-    module.iam
-  ]
+output "wan2_1_url" {
+  description = "WAN2.1 service URL"
+  value       = "http://${aws_eip.wan2_1_eip.public_ip}:8002"
 }
 
-# Load Balancer and External IP
-module "networking" {
-  source = "./modules/networking"
-  
-  project_id  = var.project_id
-  region      = var.region
-  environment = var.environment
-  
-  domain = var.domain
-  
-  labels = local.common_labels
-  
-  depends_on = [google_project_service.apis]
+output "security_group_id" {
+  description = "Security Group ID"
+  value       = aws_security_group.wan2_1_sg.id
 }
 
-# DNS Configuration
-module "dns" {
-  source = "./modules/dns"
-  
-  project_id  = var.project_id
-  environment = var.environment
-  
-  domain           = var.domain
-  dns_zone_name    = local.dns_zone_name
-  api_ip_address   = module.networking.api_ip_address
-  mlflow_ip_address = module.networking.mlflow_ip_address
-  
-  labels = local.common_labels
-  
-  depends_on = [
-    google_project_service.apis,
-    module.networking
-  ]
-}
-
-# Secret Manager
-module "secrets" {
-  source = "./modules/secrets"
-  
-  project_id  = var.project_id
-  environment = var.environment
-  
-  secrets = var.secrets
-  
-  labels = local.common_labels
-  
-  depends_on = [google_project_service.apis]
-}
-
-# Monitoring Infrastructure
-module "monitoring" {
-  source = "./modules/monitoring"
-  
-  project_id  = var.project_id
-  environment = var.environment
-  
-  notification_channels = var.notification_channels
-  
-  labels = local.common_labels
-  
-  depends_on = [google_project_service.apis]
+output "ssh_command" {
+  description = "SSH command to connect to the instance"
+  value       = "ssh -i ${var.aws_key_pair_name}.pem ubuntu@${aws_eip.wan2_1_eip.public_ip}"
 }
