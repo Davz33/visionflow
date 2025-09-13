@@ -1,0 +1,62 @@
+# Remote WAN2.1 Configuration
+# Usage: docker-compose -f docker-compose.yml -f docker-compose.remote-wan.yml up
+
+services:
+  # API Gateway configured for remote WAN
+  api-gateway:
+    environment:
+      - USE_REMOTE_WAN=true
+      - REMOTE_WAN_URL=${REMOTE_WAN_URL:-http://remote-wan-service:8002}
+      - REMOTE_WAN_API_KEY=${REMOTE_WAN_API_KEY:-}
+      - REMOTE_WAN_TIMEOUT=600
+      - REMOTE_WAN_MAX_RETRIES=3
+
+  # Celery Worker configured for remote WAN
+  celery-worker:
+    environment:
+      - USE_REMOTE_WAN=true
+      - REMOTE_WAN_URL=${REMOTE_WAN_URL:-http://remote-wan-service:8002}
+      - REMOTE_WAN_API_KEY=${REMOTE_WAN_API_KEY:-}
+      - REMOTE_WAN_TIMEOUT=600
+      - REMOTE_WAN_MAX_RETRIES=3
+
+  # Remove the local generation service when using remote WAN
+  generation-service:
+    profiles:
+      - local-only  # Only start when explicitly requested
+
+  # Optional: Add a health check service for the remote WAN endpoint
+  wan-health-check:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.api
+    container_name: visionflow-wan-health
+    command: python -c "
+import asyncio
+import httpx
+import os
+import sys
+
+async def check_wan_health():
+    wan_url = os.getenv('REMOTE_WAN_URL', 'http://remote-wan-service:8002')
+    try:
+        async with httpx.AsyncClient(timeout=10.0) as client:
+            response = await client.get(f'{wan_url}/health')
+            if response.status_code == 200:
+                print('✅ Remote WAN service is healthy')
+                sys.exit(0)
+            else:
+                print(f'❌ Remote WAN service returned status {response.status_code}')
+                sys.exit(1)
+    except Exception as e:
+        print(f'❌ Remote WAN service is unreachable: {e}')
+        sys.exit(1)
+
+asyncio.run(check_wan_health())
+"
+    environment:
+      - REMOTE_WAN_URL=${REMOTE_WAN_URL:-http://remote-wan-service:8002}
+    depends_on:
+      - api-gateway
+    restart: "no"
+

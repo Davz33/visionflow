@@ -84,6 +84,7 @@ class StorageSettings(BaseSettings):
 class ModelSettings(BaseSettings):
     """Model configuration."""
     
+    # Local model settings
     wan_model_path: str = Field(default="multimodalart/wan2-1-fast", env="WAN_MODEL_PATH")
     cache_dir: str = Field(default="./models", env="MODEL_CACHE_DIR")
     device: str = Field(default="auto", env="MODEL_DEVICE")
@@ -93,6 +94,13 @@ class ModelSettings(BaseSettings):
     max_duration: int = Field(default=30, env="MAX_DURATION")
     default_fps: int = Field(default=24, env="DEFAULT_FPS")
     default_resolution: str = Field(default="512x512", env="DEFAULT_RESOLUTION")
+    
+    # Remote WAN settings
+    use_remote_wan: bool = Field(default=False, env="USE_REMOTE_WAN")
+    remote_wan_url: str = Field(default="http://localhost:8002", env="REMOTE_WAN_URL")
+    remote_wan_api_key: str = Field(default="", env="REMOTE_WAN_API_KEY")
+    remote_wan_timeout: int = Field(default=600, env="REMOTE_WAN_TIMEOUT")
+    remote_wan_max_retries: int = Field(default=3, env="REMOTE_WAN_MAX_RETRIES")
 
     model_config = ConfigDict(env_file=".env", case_sensitive=False, extra="allow")
 

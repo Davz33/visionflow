@@ -1,6 +1,6 @@
 """Video generation service using WAN 2.1 model."""
 
-from .wan_model_service import enhanced_generation_service
+from .wan_adapter import wan_adapter
 from ...shared.models import (
     PromptOptimization,
     RoutingDecision,
@@ -13,10 +13,10 @@ logger = get_logger("generation_service")
 
 
 class VideoGenerationService:
-    """Wrapper service that uses the enhanced generation service."""
+    """Wrapper service that uses the WAN adapter for local or remote generation."""
     
     def __init__(self):
-        logger.info("Video generation service wrapper initialized")
+        logger.info("Video generation service wrapper initialized with adapter")
     
     async def generate_video(
         self,
@@ -24,16 +24,16 @@ class VideoGenerationService:
         prompt_optimization: PromptOptimization,
         routing_decision: RoutingDecision,
     ) -> GenerationResult:
-        """Generate video using enhanced WAN 2.1 service."""
+        """Generate video using WAN adapter (local or remote)."""
         
-        logger.info("Delegating to enhanced generation service")
+        logger.info("Delegating to WAN adapter service")
         
-        return await enhanced_generation_service.generate_video(
+        return await wan_adapter.generate_video(
             request,
             prompt_optimization,
             routing_decision
         )
 
 
-# Service instance - now uses enhanced service
+# Service instance - now uses adapter
 generation_service = VideoGenerationService()
