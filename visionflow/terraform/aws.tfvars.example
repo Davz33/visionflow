@@ -1,0 +1,33 @@
+# AWS Configuration Example for VisionFlow
+# Copy this file to aws.tfvars and update with your actual values
+
+# AWS Credentials (IMPORTANT: Keep this file secure and never commit to version control)
+aws_access_key_id     = "YOUR_AWS_ACCESS_KEY_ID"
+aws_secret_access_key = "YOUR_AWS_SECRET_ACCESS_KEY"
+
+# AWS Region Configuration
+aws_region = "eu-west-2"  # AWS region for EC2 instances (London)
+
+# AWS Key Pair Configuration
+aws_key_pair_name = "your-key-pair-name"  # Your AWS key pair for SSH access
+
+# AWS Network Configuration
+vpc_id                = "vpc-xxxxxxxxx"  # Replace with your VPC ID
+aws_security_group_id = "sg-xxxxxxxxx"  # Replace with your security group ID
+aws_subnet_id         = "subnet-xxxxxxxxx"  # Replace with your subnet ID
+
+# AWS EC2 Instance Configuration
+aws_instance_type = "g5.xlarge"  # EC2 instance type for WAN2.1
+aws_ami_id        = "ami-0d739456ea4b4897c"  # Deep Learning AMI (Ubuntu 24.04) - eu-west-2
+
+# Additional Configuration
+volume_size = 100  # Root volume size in GB
+remote_wan_api_key = "YOUR_WAN_API_KEY"  # API key for WAN2.1 service
+
+# Tags
+tags = {
+  Project     = "visionflow"
+  Environment = "production"
+  ManagedBy   = "terraform"
+  Service     = "wan2.1"
+}

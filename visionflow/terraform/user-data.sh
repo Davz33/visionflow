@@ -124,3 +124,4 @@ EOF
 
 # Log completion
 echo "WAN2.1 setup completed at $(date)" >> /var/log/wan2-1-setup.log
+

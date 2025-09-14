@@ -138,3 +138,10 @@ _knowledge/
 update_pyproject_history.sh
 **/*AGENTS.md
 **/*TODO.md
+
+# Terraform sensitive files
+*.tfvars
+!*.tfvars.example
+terraform.tfstate*
+.terraform/
+.terraform.lock.hcl

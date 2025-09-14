@@ -60,3 +60,4 @@ asyncio.run(check_wan_health())
       - api-gateway
     restart: "no"
 
+
