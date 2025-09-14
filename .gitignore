@@ -56,16 +56,18 @@ temp/
 tmp/
 
 # Environment & Secrets
-.env
-.env.local
-.env.*.local
-.env.backup
-*.key
-*.pem
-secrets.yaml
-secrets-local.yaml
-.secrets/
-terraform.tfvars
+**/*.env
+**/*.env.local
+**/*.env.*.local
+**/*.env.backup
+**/*.env.backup.*
+**/*.key
+**/*.pub
+**/*.pem
+**/*secrets.yaml
+**/*secrets-local.yaml
+**/.secrets/
+**/*.tfvars
 
 # Docker
 .dockerignore
@@ -77,19 +79,19 @@ docker-compose.override.yml
 *.swp
 *.swo
 *~
-.DS_Store
+**/.DS_Store
 
 # Jupyter
 .ipynb_checkpoints/
 *.ipynb
 
 # Database
-*.db
-*.sqlite
-*.sqlite3
+**/*.db
+**/*.sqlite
+**/*.sqlite3
 
 # Logs
-*.log
+**/*.log
 logs/
 .logs/
 
@@ -145,3 +147,4 @@ update_pyproject_history.sh
 terraform.tfstate*
 .terraform/
 .terraform.lock.hcl
+
