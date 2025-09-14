@@ -56,17 +56,17 @@ temp/
 tmp/
 
 # Environment & Secrets
-.env
-.env.local
-.env.*.local
+**/*.env
+**/*.env.local
+**/*.env.*.local
 *.key
-*.pem
-secrets.yaml
-.secrets/
+**/*.pem
+**/*secrets.yaml
+**/.secrets/
 
 # Docker
-.dockerignore
-docker-compose.override.yml
+**/*.dockerignore
+**/*docker-compose.override.yml
 
 # IDE & Editors
 .vscode/
