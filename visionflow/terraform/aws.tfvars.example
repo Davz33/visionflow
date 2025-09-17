@@ -24,6 +24,10 @@ aws_ami_id        = "ami-0d739456ea4b4897c"  # Deep Learning AMI (Ubuntu 24.04) 
 volume_size = 100  # Root volume size in GB
 remote_wan_api_key = "YOUR_WAN_API_KEY"  # API key for WAN2.1 service
 
+# Spot Instance Configuration (Optional - for cost savings)
+use_spot_instance = false  # Set to true to use Spot Instances (up to 90% cost savings)
+spot_max_price    = "0.10"  # Maximum price per hour for Spot Instance (in USD)
+
 # Tags
 tags = {
   Project     = "visionflow"

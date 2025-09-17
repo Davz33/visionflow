@@ -152,6 +152,11 @@ resource "aws_instance" "wan2_1_instance" {
   subnet_id             = var.aws_subnet_id
   iam_instance_profile  = aws_iam_instance_profile.wan2_1_profile.name
 
+  # Spot Instance configuration
+  spot_price            = var.use_spot_instance ? var.spot_max_price : null
+  spot_type             = var.use_spot_instance ? "one-time" : null
+  wait_for_fulfillment  = var.use_spot_instance ? true : false
+
   root_block_device {
     volume_type = "gp3"
     volume_size = var.volume_size
@@ -162,6 +167,7 @@ resource "aws_instance" "wan2_1_instance" {
 
   tags = merge(var.tags, {
     Name = "wan2-1-instance"
+    InstanceType = var.use_spot_instance ? "spot" : "on-demand"
   })
 }
 
@@ -209,4 +215,18 @@ output "security_group_id" {
 output "ssh_command" {
   description = "SSH command to connect to the instance"
   value       = "ssh -i ${var.aws_key_pair_name}.pem ubuntu@${aws_eip.wan2_1_eip.public_ip}"
+}
+
+output "instance_type" {
+  description = "Instance type (spot or on-demand)"
+  value       = var.use_spot_instance ? "spot" : "on-demand"
+}
+
+output "spot_configuration" {
+  description = "Spot Instance configuration details"
+  value = var.use_spot_instance ? {
+    max_price = var.spot_max_price
+    type      = "one-time"
+    cost_savings = "Up to 90% compared to On-Demand pricing"
+  } : null
 }

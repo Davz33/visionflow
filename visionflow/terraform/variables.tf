@@ -110,3 +110,16 @@ variable "mlflow_bucket_name" {
   type        = string
   default     = ""
 }
+
+# Spot Instance Configuration
+variable "use_spot_instance" {
+  description = "Whether to use Spot Instances instead of On-Demand"
+  type        = bool
+  default     = false
+}
+
+variable "spot_max_price" {
+  description = "Maximum price per hour for Spot Instance (in USD)"
+  type        = string
+  default     = "0.10"
+}
