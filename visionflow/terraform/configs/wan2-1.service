@@ -1,0 +1,16 @@
+[Unit]
+Description=WAN2.1 Service
+After=docker.service
+Requires=docker.service
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+WorkingDirectory=/opt/wan2-1
+ExecStart=/usr/local/bin/docker-compose up -d
+ExecStop=/usr/local/bin/docker-compose down
+User=ubuntu
+Group=ubuntu
+
+[Install]
+WantedBy=multi-user.target

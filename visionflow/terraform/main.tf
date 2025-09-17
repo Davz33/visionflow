@@ -1,5 +1,5 @@
-# Minimal AWS EC2 + GPU Configuration for VisionFlow WAN2.1
-# This configuration only handles the bare AWS EC2 instance setup
+# AWS EC2 + GPU Configuration for VisionFlow WAN2.1
+# This configuration handles EC2 instance setup with external configuration files
 
 terraform {
   required_version = ">= 1.5"
@@ -25,6 +25,20 @@ provider "aws" {
 # Data sources
 data "aws_availability_zones" "available" {
   state = "available"
+}
+
+# Configuration upload module
+module "config_upload" {
+  source = "./modules/config-upload"
+  
+  project_name = "visionflow"
+  environment  = "production"
+  
+  # S3 bucket creation control
+  create_config_bucket = var.create_config_bucket
+  config_bucket_name   = var.config_bucket_name
+  
+  tags = var.tags
 }
 
 # Security Group for WAN2.1 Service
@@ -120,10 +134,12 @@ resource "aws_cloudwatch_log_group" "wan2_1_logs" {
   tags = var.tags
 }
 
-# User data script
+# User data script with config source
 locals {
   user_data = base64encode(templatefile("${path.module}/user-data.sh", {
-    api_key = var.remote_wan_api_key
+    api_key       = var.remote_wan_api_key
+    config_source = "s3"
+    s3_bucket     = module.config_upload.config_bucket_name
   }))
 }
 

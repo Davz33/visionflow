@@ -114,6 +114,8 @@ htmlcov/
 
 # Documentation
 docs/_build/
+# Ignore all .md files by default (add manually as needed)
+**/*.md
 
 # Temporary files
 *.tmp

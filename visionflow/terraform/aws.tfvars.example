@@ -9,7 +9,7 @@ aws_secret_access_key = "YOUR_AWS_SECRET_ACCESS_KEY"
 aws_region = "eu-west-2"  # AWS region for EC2 instances (London)
 
 # AWS Key Pair Configuration
-aws_key_pair_name = "your-key-pair-name"  # Your AWS key pair for SSH access
+aws_key_pair_name = "visionflow-key"  # Your AWS key pair for SSH access
 
 # AWS Network Configuration
 vpc_id                = "vpc-xxxxxxxxx"  # Replace with your VPC ID
