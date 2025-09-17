@@ -30,7 +30,7 @@ This is a minimal, focused Terraform configuration that only handles the bare AW
 
 ## Quick Start
 
-1. **Update your values in `aws.tfvars`**:
+1. **Update your values in `*.tfvars`(s)**:
    ```bash
    # Edit the file with your specific values
    vim aws.tfvars
@@ -41,9 +41,9 @@ This is a minimal, focused Terraform configuration that only handles the bare AW
    terraform init
    ```
 
-3. **Plan the deployment**:
+3. **Plan the deployment using (all or some) var-files**:
    ```bash
-   terraform plan -var-file="aws.tfvars"
+   terraform plan -var-file="*.tfvars" -var-file="*.tfvars" -var-file="*.tfvars" 
    ```
 
 4. **Deploy the infrastructure**:
@@ -51,10 +51,30 @@ This is a minimal, focused Terraform configuration that only handles the bare AW
    terraform apply -var-file="aws.tfvars"
    ```
 
-5. **Connect to your instance**:
+5. **Verify aws cli is in the correct region**
+   ```bash
+   aws configure get region
+   ````
+And change to the region where the instance is deployed, if necessary
+
+6. **Create and associate a key-pair**
+   ```bash
+   # Create new key pair and set permissions
+   aws ec2 create-key-pair --region <region> --key-name <key-pair-name> --query 'KeyMaterial' --output text > <key-pair-name>.pem
+   chmod 600 <key-pair-name>.pem
+   # Add to .gitignore, in case you're tracking you're project
+   echo "<key-pair-name>.pem" >> .gitignore
+   git add .gitignore
+   # Extract public key from private and send it to the instance using EC2 instance connect
+   ssh-keygen -y -f <key-pair-name>.pem > <key-pair-name>.pub
+   aws ec2-instance-connect send-ssh-public-key --region <region> --instance-id <ec2-instance-id> --instance-os-user <username> --ssh-public-key file://<key-pair-name>.pub
+   ```
+
+7. **Connect to your instance**:
    ```bash
    # Use the SSH command from the output
-   ssh -i visionflow-key.pem ubuntu@<elastic-ip>
+   # The standard username is ubuntu on ubuntu ec2 instances
+   ssh -i <key-pair-name>.pem <username>@<elastic-ip>
    ```
 
 ## Outputs
@@ -81,3 +101,7 @@ This approach allows you to:
 - **Deploy independently** - Each service can be deployed separately
 - **Maintain easily** - Smaller, focused configurations
 - **Scale teams** - Different teams can own different configurations
+
+
+
+

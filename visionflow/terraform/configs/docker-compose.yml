@@ -1,0 +1,26 @@
+version: '3.8'
+
+services:
+  wan2-1:
+    image: wan2-1:latest  # Replace with your actual image
+    container_name: wan2-1
+    restart: unless-stopped
+    ports:
+      - "8002:8002"
+    environment:
+      - API_KEY=${api_key}
+      - API_HOST=0.0.0.0
+      - API_PORT=8002
+      - LOG_LEVEL=info
+      - MODEL_DEVICE=cuda
+      - MODEL_CACHE_DIR=/app/models
+    volumes:
+      - ./models:/app/models
+      - ./outputs:/app/outputs
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [gpu]

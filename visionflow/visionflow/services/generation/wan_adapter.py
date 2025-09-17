@@ -109,3 +109,7 @@ class WANServiceAdapter:
 # Global adapter instance
 wan_adapter = WANServiceAdapter()
 
+
+
+
+

@@ -72,3 +72,54 @@ variable "tags" {
     ManagedBy   = "terraform"
   }
 }
+
+# S3 Bucket Creation Control Variables
+variable "create_config_bucket" {
+  description = "Whether to create the configuration bucket for WAN2.1"
+  type        = bool
+  default     = true
+}
+
+variable "create_media_bucket" {
+  description = "Whether to create the media storage bucket"
+  type        = bool
+  default     = true
+}
+
+variable "create_mlflow_bucket" {
+  description = "Whether to create the MLflow artifacts bucket"
+  type        = bool
+  default     = true
+}
+
+# Optional: Override bucket names
+variable "config_bucket_name" {
+  description = "Name for the configuration bucket (optional, will be auto-generated if not provided)"
+  type        = string
+  default     = ""
+}
+
+variable "media_bucket_name" {
+  description = "Name for the media bucket (optional, will be auto-generated if not provided)"
+  type        = string
+  default     = ""
+}
+
+variable "mlflow_bucket_name" {
+  description = "Name for the MLflow bucket (optional, will be auto-generated if not provided)"
+  type        = string
+  default     = ""
+}
+
+# Spot Instance Configuration
+variable "use_spot_instance" {
+  description = "Whether to use Spot Instances instead of On-Demand"
+  type        = bool
+  default     = false
+}
+
+variable "spot_max_price" {
+  description = "Maximum price per hour for Spot Instance (in USD)"
+  type        = string
+  default     = "0.10"
+}
