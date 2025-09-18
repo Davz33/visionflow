@@ -273,13 +273,17 @@ The platform uses Kubernetes ConfigMaps and Secrets for configuration management
 
 ## 📊 API Endpoints
 
-### Core Endpoints
-
 - `GET /health` - Health check
 - `GET /metrics` - Prometheus metrics
 - `POST /generate/video` - Video generation request
 - `POST /evaluate/video` - Video evaluation request
 - `GET /jobs/{job_id}` - Job status and results
+- `GET /metadata/video` - Retrieve metadata for a video (e.g., duration, resolution, codec, from storage/DB)
+- `GET /analytics/summary` - High-level analytics summary across jobs/generations (aggregated metrics)
+- `GET /generate/video/status/{generation_id}` - Get current status and progress for a specific generation job
+- `GET /generate/video/history` - List historical generation jobs with basic metadata (timestamps, status)
+- `GET /generate/video/{generation_id}` - Retrieve details and results (URLs, metadata) for a completed generation
+- `GET /models/status` - Return model availability and health (which models are loaded, device usage)
 
 ### Video Generation
 
