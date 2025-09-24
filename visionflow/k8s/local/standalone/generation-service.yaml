@@ -22,7 +22,6 @@ data:
   LOG_LEVEL: "debug"
   API_HOST: "0.0.0.0"
   API_PORT: "8002"
-  
   # Model config
   MODEL_DEVICE: "cpu"
   MODEL_CACHE_DIR: "/app/models"
@@ -51,7 +50,7 @@ spec:
         image: visionflow-generation:local
         imagePullPolicy: Never  # Use local built image
         command:  ["/bin/bash"]
-        args: ["-c", "python -c 'import visionflow' 2>/dev/null || pip install -e .[dev,monitoring]; python -m uvicorn visionflow.services.generation.standalone_service:app --host 0.0.0.0 --port 8002"]
+        args: ["-c", "python -c 'import visionflow' 2>/dev/null || (pip install -e . --target /app/packages && echo 'export PYTHONPATH=/app/packages:$PYTHONPATH' >> ~/.bashrc); export PYTHONPATH=/app/packages:$PYTHONPATH; python -m uvicorn visionflow.services.generation.standalone_service:app --host 0.0.0.0 --port 8002"]
         ports:
         - containerPort: 8002
         env:
@@ -104,6 +103,8 @@ spec:
           mountPath: /app/generated
         - name: logs-volume
           mountPath: /app/logs
+        - name: packages-volume
+          mountPath: /app/packages
         resources:
           requests:
             memory: "1Gi"
@@ -140,6 +141,9 @@ spec:
       - name: logs-volume
         persistentVolumeClaim:
           claimName: logs-pvc
+      - name: packages-volume
+        persistentVolumeClaim:
+          claimName: packages-pvc
 
 ---
 # Generation Service Service
