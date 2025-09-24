@@ -51,7 +51,6 @@ RUN pip install \
     accelerate==0.24.0 \
     transformers==4.35.0 \
     diffusers==0.24.0 \
-    xformers==0.0.22 \
     opencv-python==4.8.0.76 \
     ffmpeg-python==0.2.0
 

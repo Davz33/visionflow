@@ -90,7 +90,6 @@ class ModelSettings(BaseSettings):
     device: str = Field(default="auto", env="MODEL_DEVICE")
     max_memory_gb: int = Field(default=8, env="MAX_MEMORY_GB")
     enable_cpu_offload: bool = Field(default=True, env="ENABLE_CPU_OFFLOAD")
-    enable_xformers: bool = Field(default=True, env="ENABLE_XFORMERS")
     max_duration: int = Field(default=30, env="MAX_DURATION")
     default_fps: int = Field(default=24, env="DEFAULT_FPS")
     default_resolution: str = Field(default="512x512", env="DEFAULT_RESOLUTION")
