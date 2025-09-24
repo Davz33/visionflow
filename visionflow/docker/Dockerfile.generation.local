@@ -34,7 +34,7 @@ FROM dependencies AS final
 #RUN pip install opencv-python-headless --upgrade --no-cache-dir --force-reinstall
 
 # Create necessary directories
-RUN mkdir -p /app/logs /app/models /app/generated /tmp
+RUN mkdir -p /app/logs /app/models /app/generated /app/cache /tmp
 
 # Create non-root user
 RUN useradd --create-home --shell /bin/bash --uid 1000 app \

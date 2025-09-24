@@ -85,8 +85,8 @@ class ModelSettings(BaseSettings):
     """Model configuration."""
     
     # Local model settings
-    wan_model_path: str = Field(default="multimodalart/wan2-1-fast", env="WAN_MODEL_PATH")
-    cache_dir: str = Field(default="./models", env="MODEL_CACHE_DIR")
+    wan_model_path: str = Field(env="WAN_MODEL_PATH")
+    cache_dir: str = Field(default="/app/cache", env="MODEL_CACHE_DIR")
     device: str = Field(default="auto", env="MODEL_DEVICE")
     max_memory_gb: int = Field(default=8, env="MAX_MEMORY_GB")
     enable_cpu_offload: bool = Field(default=True, env="ENABLE_CPU_OFFLOAD")

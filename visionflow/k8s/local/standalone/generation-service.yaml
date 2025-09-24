@@ -24,8 +24,8 @@ data:
   API_PORT: "8002"
   # Model config
   MODEL_DEVICE: "cpu"
-  MODEL_CACHE_DIR: "/app/models"
-  WAN_MODEL_PATH: "multimodalart/wan2-1-fast"
+  MODEL_CACHE_DIR: "/app/cache"
+  WAN_MODEL_PATH: "/app/cache/huggingface/models--Wan-AI--Wan2.1-T2V-1.3B-Diffusers/snapshots/0fad780a534b6463e45facd96134c9f345acfa5b"
   MAX_CONCURRENT_GENERATIONS: "1"
 
 ---
@@ -50,7 +50,7 @@ spec:
         image: visionflow-generation:local
         imagePullPolicy: Never  # Use local built image
         command:  ["/bin/bash"]
-        args: ["-c", "python -c 'import visionflow' 2>/dev/null || (pip install -e . --target /app/packages && echo 'export PYTHONPATH=/app/packages:$PYTHONPATH' >> ~/.bashrc); export PYTHONPATH=/app/packages:$PYTHONPATH; python -m uvicorn visionflow.services.generation.standalone_service:app --host 0.0.0.0 --port 8002"]
+        args: ["-c", "if [ ! -f /app/packages/.installed ]; then echo 'Installing packages...' && pip install -e . --target /app/packages && touch /app/packages/.installed && echo 'Installation complete'; else echo 'Packages already installed, skipping...'; fi; export PYTHONPATH=/app/packages:$PYTHONPATH; python -m visionflow.services.generation.standalone_service"]        
         ports:
         - containerPort: 8002
         env:
@@ -105,6 +105,8 @@ spec:
           mountPath: /app/logs
         - name: packages-volume
           mountPath: /app/packages
+        - name: cache-volume
+          mountPath: /app/cache
         resources:
           requests:
             memory: "1Gi"
@@ -144,6 +146,10 @@ spec:
       - name: packages-volume
         persistentVolumeClaim:
           claimName: packages-pvc
+      - name: cache-volume
+        hostPath:
+          path: /visionflow/cache
+          type: Directory
 
 ---
 # Generation Service Service
@@ -200,3 +206,16 @@ spec:
   resources:
     requests:
       storage: 2Gi
+
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: packages-pvc
+  namespace: visionflow-generation
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 1Gi

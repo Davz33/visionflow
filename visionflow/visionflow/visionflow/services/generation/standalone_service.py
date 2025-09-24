@@ -3,9 +3,7 @@ Standalone video generation service
 Can run independently or as part of the main application
 """
 
-import asyncio
 import time
-import uuid
 from datetime import datetime
 from typing import Dict, Any, Optional
 
@@ -29,7 +27,7 @@ settings = get_settings()
 # Create FastAPI app
 app = FastAPI(
     title="VisionFlow Generation Service",
-    description="GPU-accelerated video generation with WAN 2.1",
+    description="Video generation with WAN 2.1",
     version="0.1.0",
     docs_url="/docs",
     redoc_url="/redoc",
