@@ -1,0 +1,198 @@
+# Standalone Generation Service for local testing
+---
+# Namespace
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: visionflow-generation
+  labels:
+    name: visionflow-generation
+    environment: local
+
+---
+# ConfigMap for generation service
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: generation-config
+  namespace: visionflow-generation
+data:
+  # Environment
+  ENVIRONMENT: "local"
+  LOG_LEVEL: "debug"
+  API_HOST: "0.0.0.0"
+  API_PORT: "8002"
+  
+  # Model config
+  MODEL_DEVICE: "cpu"
+  MODEL_CACHE_DIR: "/app/models"
+  WAN_MODEL_PATH: "multimodalart/wan2-1-fast"
+  MAX_CONCURRENT_GENERATIONS: "1"
+
+---
+# Generation Service Deployment
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: generation-service
+  namespace: visionflow-generation
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: generation-service
+  template:
+    metadata:
+      labels:
+        app: generation-service
+    spec:
+      containers:
+      - name: generation
+        image: visionflow-generation:local
+        imagePullPolicy: Never  # Use local built image
+        command:  ["/bin/bash"]
+        args: ["-c", "python -c 'import visionflow' 2>/dev/null || pip install -e .[dev,monitoring]; python -m uvicorn visionflow.services.generation.standalone_service:app --host 0.0.0.0 --port 8002"]
+        ports:
+        - containerPort: 8002
+        env:
+        - name: ENVIRONMENT
+          valueFrom:
+            configMapKeyRef:
+              name: generation-config
+              key: ENVIRONMENT
+        - name: API_HOST
+          valueFrom:
+            configMapKeyRef:
+              name: generation-config
+              key: API_HOST
+        - name: API_PORT
+          valueFrom:
+            configMapKeyRef:
+              name: generation-config
+              key: API_PORT
+        - name: LOG_LEVEL
+          valueFrom:
+            configMapKeyRef:
+              name: generation-config
+              key: LOG_LEVEL
+        - name: MODEL_DEVICE
+          valueFrom:
+            configMapKeyRef:
+              name: generation-config
+              key: MODEL_DEVICE
+        - name: MODEL_CACHE_DIR
+          valueFrom:
+            configMapKeyRef:
+              name: generation-config
+              key: MODEL_CACHE_DIR
+        - name: WAN_MODEL_PATH
+          valueFrom:
+            configMapKeyRef:
+              name: generation-config
+              key: WAN_MODEL_PATH
+        - name: MAX_CONCURRENT_GENERATIONS
+          valueFrom:
+            configMapKeyRef:
+              name: generation-config
+              key: MAX_CONCURRENT_GENERATIONS
+        volumeMounts:
+        - name: source-code-volume
+          mountPath: /app
+        - name: models-volume
+          mountPath: /app/models
+        - name: generated-volume
+          mountPath: /app/generated
+        - name: logs-volume
+          mountPath: /app/logs
+        resources:
+          requests:
+            memory: "1Gi"
+            cpu: "500m"
+          limits:
+            memory: "4Gi"
+            cpu: "2000m"
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: 8002
+          initialDelaySeconds: 60
+          periodSeconds: 30
+          timeoutSeconds: 15
+          failureThreshold: 3
+        readinessProbe:
+          httpGet:
+            path: /health
+            port: 8002
+          initialDelaySeconds: 30
+          periodSeconds: 10
+          timeoutSeconds: 10
+      volumes:
+      - name: source-code-volume
+        hostPath:
+          path: /visionflow
+          type: Directory
+      - name: models-volume
+        persistentVolumeClaim:
+          claimName: models-pvc
+      - name: generated-volume
+        persistentVolumeClaim:
+          claimName: generated-pvc
+      - name: logs-volume
+        persistentVolumeClaim:
+          claimName: logs-pvc
+
+---
+# Generation Service Service
+apiVersion: v1
+kind: Service
+metadata:
+  name: generation-service
+  namespace: visionflow-generation
+spec:
+  selector:
+    app: generation-service
+  ports:
+  - port: 8002
+    targetPort: 8002
+    nodePort: 30002
+  type: NodePort
+
+---
+# Persistent Volume Claims
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: models-pvc
+  namespace: visionflow-generation
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 10Gi
+
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: generated-pvc
+  namespace: visionflow-generation
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 5Gi
+
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: logs-pvc
+  namespace: visionflow-generation
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 2Gi

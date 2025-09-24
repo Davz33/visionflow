@@ -696,5 +696,6 @@ class EnhancedVideoGenerationService:
 # Import our clean WAN service
 from .wan_video_service import wan_service
 
-# Service instance - use our clean implementation
-enhanced_generation_service = wan_service
+# Service instance 
+#enhanced_generation_service = wan_service
+enhanced_generation_service = EnhancedVideoGenerationService()

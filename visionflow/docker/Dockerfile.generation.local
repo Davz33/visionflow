@@ -1,0 +1,58 @@
+# This image produced is meant to be provisioned via ../k8s/local/standalone/generation-service.yaml
+# CPU-only Dockerfile for local video generation service testing
+FROM python:3.11-slim AS build
+
+# Set environment variables
+ENV PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONUNBUFFERED=1 \
+    PYTHONPATH=/app \
+    PIP_NO_CACHE_DIR=1 \
+    PIP_DISABLE_PIP_VERSION_CHECK=1
+
+# Set work directory
+WORKDIR /app
+
+FROM build AS dependencies
+# Install system dependencies
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    build-essential \
+    curl \
+    git \
+    libpq-dev \
+    libglib2.0-0 \
+    libsm6 \
+    libxext6 \
+    libxrender-dev \
+    libgomp1 \
+    libgl1-mesa-dri \
+    libglib2.0-0 \
+    ffmpeg \
+    && rm -rf /var/lib/apt/lists/*
+
+FROM dependencies AS final
+# Install OpenCV with NumPy 2.x compatibility (use latest version)
+#RUN pip install opencv-python-headless --upgrade --no-cache-dir --force-reinstall
+
+# Create necessary directories
+RUN mkdir -p /app/logs /app/models /app/generated /tmp
+
+# Create non-root user
+RUN useradd --create-home --shell /bin/bash --uid 1000 app \
+    && chown -R app:app /app
+USER app
+
+# Expose port
+EXPOSE 8002
+
+# Health check
+HEALTHCHECK --interval=30s --timeout=15s --start-period=60s --retries=3 \
+    CMD curl -f http://localhost:8002/health || exit 1
+
+# install the package in pip editable mode
+# note: this is meant for local dev development, hence
+# the source code and large data files are mounted after 
+# the build, and the visionflow package is installed at runtime
+# by kubernetes (or manually by the user) using: pip install -e .[dev,monitoring] 
+
+
+# Run: the CMD directive is delegated to the kubernetes deployment in ../k8s/local/standalone/generation-service.yaml

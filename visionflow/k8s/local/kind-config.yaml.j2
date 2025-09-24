@@ -24,11 +24,11 @@ nodes:
 - role: worker
   image: kindest/node:v1.28.0
   extraMounts:
-  - hostPath: /Users/dav/coding/wan-open-eval/visionflow
+  - hostPath: {{ pwd }}
     containerPath: /visionflow
-  - hostPath: /Users/dav/coding/wan-open-eval/visionflow/models
+  - hostPath: {{ pwd }}/models
     containerPath: /models
-  - hostPath: /Users/dav/coding/wan-open-eval/visionflow/generated
+  - hostPath: {{ pwd }}/generated
     containerPath: /generated
   kubeadmConfigPatches:
   - |

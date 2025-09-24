@@ -1,0 +1,119 @@
+# Health-only Generation Service (no ML dependencies)
+---
+# Namespace
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: visionflow-generation-health
+  labels:
+    name: visionflow-generation-health
+    environment: local
+
+---
+# ConfigMap for health service
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: generation-health-config
+  namespace: visionflow-generation-health
+data:
+  # Environment
+  ENVIRONMENT: "local"
+  LOG_LEVEL: "debug"
+  API_HOST: "0.0.0.0"
+  API_PORT: "8002"
+  SERVICE_NAME: "generation-service"
+
+---
+# Health Service Deployment
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: generation-health-service
+  namespace: visionflow-generation-health
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: generation-health-service
+  template:
+    metadata:
+      labels:
+        app: generation-health-service
+    spec:
+      containers:
+      - name: health-service
+        image: visionflow-generation-health:local
+        imagePullPolicy: Never  # Use local built image
+        ports:
+        - containerPort: 8002
+        env:
+        - name: ENVIRONMENT
+          valueFrom:
+            configMapKeyRef:
+              name: generation-health-config
+              key: ENVIRONMENT
+        - name: API_HOST
+          valueFrom:
+            configMapKeyRef:
+              name: generation-health-config
+              key: API_HOST
+        - name: API_PORT
+          valueFrom:
+            configMapKeyRef:
+              name: generation-health-config
+              key: API_PORT
+        - name: LOG_LEVEL
+          valueFrom:
+            configMapKeyRef:
+              name: generation-health-config
+              key: LOG_LEVEL
+        - name: SERVICE_NAME
+          valueFrom:
+            configMapKeyRef:
+              name: generation-health-config
+              key: SERVICE_NAME
+        - name: PYTHONPATH
+          value: "/app"
+        - name: PYTHONUNBUFFERED
+          value: "1"
+        - name: PYTHONDONTWRITEBYTECODE
+          value: "1"
+        resources:
+          requests:
+            memory: "128Mi"
+            cpu: "100m"
+          limits:
+            memory: "256Mi"
+            cpu: "200m"
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: 8002
+          initialDelaySeconds: 10
+          periodSeconds: 30
+          timeoutSeconds: 5
+          failureThreshold: 3
+        readinessProbe:
+          httpGet:
+            path: /health/ready
+            port: 8002
+          initialDelaySeconds: 5
+          periodSeconds: 10
+          timeoutSeconds: 5
+
+---
+# Health Service Service
+apiVersion: v1
+kind: Service
+metadata:
+  name: generation-health-service
+  namespace: visionflow-generation-health
+spec:
+  selector:
+    app: generation-health-service
+  ports:
+  - port: 8002
+    targetPort: 8002
+    nodePort: 30002
+  type: NodePort
