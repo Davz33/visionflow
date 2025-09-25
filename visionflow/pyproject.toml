@@ -88,6 +88,9 @@ dependencies = [
     "gunicorn>=21.2.0",          # Production WSGI server
     "sentry-sdk[fastapi]>=1.40.0", # Error tracking
     "asyncpg>=0.29.0",           # Fast async PostgreSQL
+
+    # Text processing
+    "ftfy>=6.1.0"
 ]
 
 [project.optional-dependencies]
