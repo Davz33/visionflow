@@ -1,69 +1,71 @@
 #!/bin/bash
+# Deploy VisionFlow to local Kubernetes kind cluster
+# run via: cd visionflow && source scripts/deploy-k8s-local.sh
 
-# Deploy VisionFlow to local Kubernetes cluster
+echo "🚀 Deploying VisionFlow to local kind cluster"
 
-set -e
+# Check if Docker engine is running
+if ! docker info > /dev/null 2>&1; then
+    echo "❌ Docker engine is not running. Starting Docker engine..."
 
-echo "🚀 Deploying VisionFlow to local Kubernetes..."
+    if [[ "$OSTYPE" == "darwin"* ]]; then
+        open -a Docker --background
+    elif [[ "$OSTYPE" == "linux-gnu"* ]]; then
+        sudo systemctl start docker
+    elif [[ "$OSTYPE" == "cygwin"* ]] || [[ "$OSTYPE" == "msys"* ]] || [[ "$OSTYPE" == "win32"* ]]; then
+        cmd.exe /C "start \"\" \"C:\Program Files\Docker\Docker\Docker Desktop.exe\""
+    else
+        echo "❌ Unsupported operating system. Please start Docker engine manually."
+        exit 1
+    fi
+fi
 
-# Set up paths
-SCRIPT_DIR="$(dirname "$0")"
-PROJECT_DIR="$SCRIPT_DIR/.."
-K8S_DIR="$PROJECT_DIR/k8s"
-
+# Check if kind is installed
+if ! command -v kind &> /dev/null; then
+    echo "❌ kind is not installed. Please install kind first."
+    echo "💡 To install kind, please refer to the documentation: https://kind.sigs.k8s.io/docs/user/quick-start/"
+    exit 1
+fi
 # Check if kubectl is available
 if ! command -v kubectl &> /dev/null; then
     echo "❌ kubectl is not installed. Please install kubectl first."
+    echo "💡 To install kubectl, please refer to the documentation: https://kubernetes.io/docs/tasks/tools/install-kubectl/"
     exit 1
 fi
+
 
 # Check if local cluster is running
 if ! kubectl cluster-info &> /dev/null; then
     echo "❌ No Kubernetes cluster is running."
-    echo "💡 For local development, you can use:"
-    echo "   - kind: kind create cluster --config k8s/local/kind-config.yaml"
-    echo "   - minikube: minikube start"
-    echo "   - Docker Desktop Kubernetes: Enable in settings"
-    exit 1
+    echo "Starting kind cluster..."
+    kind create cluster --name visionflow --config k8s/local/kind-config.yaml &
+    
+    # Wait for cluster to be ready
+    echo "⏳ Waiting for cluster to be ready..."
+    kubectl wait --for=condition=Ready nodes --all --timeout=10s
 fi
 
-# Build images first
-echo "🔨 Building Docker images..."
-bash "$SCRIPT_DIR/build-images.sh"
+# Build images first, if not already built
+if ! docker images | grep -q "visionflow-generation:local"; then
+    echo "🔨 Building Docker images..."
+    docker build -t visionflow-generation:local -f docker/Dockerfile.generation.local .
+fi
 
 # Check if using kind and load images
 if kubectl config current-context | grep -q "kind"; then
     echo "🐋 Loading images into kind cluster..."
-    kind load docker-image visionflow-api:local --name visionflow-local
-    kind load docker-image visionflow-generation:local --name visionflow-local
-    kind load docker-image visionflow-orchestrator:local --name visionflow-local
+    kind load docker-image visionflow-generation:local --name visionflow
 fi
 
 # Apply Kubernetes manifests
 echo "📦 Applying Kubernetes manifests..."
-kubectl apply -f "$K8S_DIR/local/complete-local-deployment.yaml"
+kubectl apply -f k8s/local/standalone/generation-service.yaml
 
 # Wait for deployments to be ready
 echo "⏳ Waiting for deployments to be ready..."
-kubectl wait --for=condition=available --timeout=300s deployment --all -n visionflow-local
+echo "To monitor the deployment, you can use the following command:"
+echo "kubectl get pods -n visionflow-generation"
 
-# Show status
-echo "✅ Deployment complete!"
-echo ""
-echo "📊 Deployment status:"
-kubectl get pods -n visionflow-local
-
-echo ""
-echo "🌐 Service endpoints:"
-echo "   API Gateway:    http://localhost:30000"
-echo "   Generation:     http://localhost:30002"  
-echo "   Orchestration:  http://localhost:30001"
-echo "   Prometheus:     http://localhost:30090"
-echo "   Grafana:        http://localhost:30300 (admin/admin)"
-echo "   MinIO Console:  http://localhost:30901"
-
-echo ""
 echo "📝 Useful commands:"
-echo "   View logs: kubectl logs -f deployment/api-gateway -n visionflow-local"
-echo "   Scale:     kubectl scale deployment api-gateway --replicas=2 -n visionflow-local" 
-echo "   Delete:    kubectl delete namespace visionflow-local"
+echo "   View logs: kubectl logs -n visionflow-generation -l app=generation-service -f"
+echo "   Run command in container: kubectl exec -it -n visionflow-generation <pod-name>-- bash -c '...'"
