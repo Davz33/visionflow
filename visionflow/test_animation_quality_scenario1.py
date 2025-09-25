@@ -9,15 +9,13 @@ import time
 from pathlib import Path
 from typing import List, Dict, Any
 import sys
-import os
 
 # Add the visionflow package to the path
 sys.path.append(str(Path(__file__).parent / "visionflow"))
 
 from visionflow.services.evaluation.video_evaluation_orchestrator import (
     VideoEvaluationOrchestrator,
-    EvaluationDimension,
-    ConfidenceLevel
+    EvaluationDimension
 )
 from visionflow.services.evaluation.test_animation_quality_dataset import (
     get_test_animation_dataset,

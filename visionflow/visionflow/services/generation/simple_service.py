@@ -9,7 +9,7 @@ import time
 from datetime import datetime
 from typing import Dict, Any, Optional
 
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI
 from pydantic import BaseModel
 import uvicorn
 

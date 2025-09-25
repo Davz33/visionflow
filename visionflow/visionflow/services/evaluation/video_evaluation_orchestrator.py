@@ -17,17 +17,13 @@ import time
 import uuid
 from datetime import datetime
 from enum import Enum
-from pathlib import Path
 from typing import Dict, List, Optional, Tuple, Any
 from dataclasses import dataclass, field
 
 import cv2
 import numpy as np
-import torch
-from PIL import Image
 
 from ...shared.monitoring import get_logger
-from .metrics import record_evaluation_metrics, record_evaluation_failure
 
 logger = get_logger(__name__)
 

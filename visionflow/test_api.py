@@ -3,7 +3,6 @@
 
 import requests
 import time
-import json
 
 def test_health():
     """Test health endpoint."""

@@ -4,17 +4,14 @@ Tracks experiments, model performance, and artifacts
 """
 
 import os
-import uuid
 from datetime import datetime
 from typing import Any, Dict, List, Optional, Union
-from pathlib import Path
 
 import mlflow
 import mlflow.pytorch
 import mlflow.transformers
 from mlflow.tracking import MlflowClient
 from mlflow.entities import ViewType
-import torch
 
 from ...shared.config import get_settings
 from ...shared.monitoring import get_logger

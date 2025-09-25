@@ -6,13 +6,11 @@ Keeps your exact WAN model code, just delegates execution to remote GPUs
 
 import asyncio
 import os
-import json
 import time
 import uuid
-from typing import Dict, Any, Optional, Union
+from typing import Dict, Any, Optional
 from dataclasses import dataclass, asdict
 from enum import Enum
-from pathlib import Path
 import logging
 
 logger = logging.getLogger(__name__)
@@ -90,7 +88,6 @@ class WANRemoteExecutor:
                     sys.path.append('/app')  # Adjust path as needed
                     
                     from visionflow.services.generation.wan_video_service import WanVideoGenerationService
-                    from visionflow.shared.models import VideoGenerationRequest
                     
                     self.wan_service = WanVideoGenerationService()
                     logger.info("WAN 2.1 service initialized on Ray worker")

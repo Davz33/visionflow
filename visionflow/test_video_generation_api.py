@@ -4,7 +4,6 @@ Test script for the new video generation API endpoints.
 This script tests the FastAPI application without starting the full server.
 """
 
-import asyncio
 import sys
 from pathlib import Path
 

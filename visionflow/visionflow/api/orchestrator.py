@@ -1,6 +1,5 @@
 """Real WAN 2.1 orchestrator with database updates."""
 
-import asyncio
 import os
 from typing import Dict, Any
 from ..shared.models import VideoGenerationRequest, JobStatus

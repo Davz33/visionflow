@@ -4,14 +4,13 @@ RunPod Handler for WAN 2.1 Generation
 This script runs inside RunPod containers and handles video generation requests
 """
 
-import os
 import sys
 import json
 import time
 import asyncio
 import logging
 from pathlib import Path
-from typing import Dict, Any, Optional
+from typing import Dict, Any
 
 # Configure logging
 logging.basicConfig(
@@ -38,7 +37,6 @@ def init_wan_service():
         
         # Import your WAN service
         from visionflow.services.generation.wan_video_service import WanVideoGenerationService
-        from visionflow.shared.models import VideoGenerationRequest
         
         # Initialize the service
         wan_service = WanVideoGenerationService()

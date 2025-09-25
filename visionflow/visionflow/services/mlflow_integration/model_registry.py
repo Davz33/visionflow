@@ -5,10 +5,9 @@ Manages model versions, staging, and deployment
 
 import json
 from datetime import datetime
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, Dict, List, Optional
 from enum import Enum
 
-from mlflow.tracking import MlflowClient
 from mlflow.entities.model_registry import ModelVersion
 
 from .model_tracker import get_model_tracker

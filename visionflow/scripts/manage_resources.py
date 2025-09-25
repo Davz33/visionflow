@@ -12,7 +12,7 @@ from pathlib import Path
 project_root = Path(__file__).parent.parent
 sys.path.insert(0, str(project_root))
 
-from visionflow.services.generation.resource_config import get_resource_limits, ResourceLimits
+from visionflow.services.generation.resource_config import get_resource_limits
 
 def get_system_info():
     """Get current system resource information."""

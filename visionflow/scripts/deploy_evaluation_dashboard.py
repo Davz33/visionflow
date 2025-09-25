@@ -4,13 +4,8 @@ Proper deployment script for VisionFlow Evaluation Dashboard.
 This script handles dashboard deployment without embedding JSON in K8s YAML.
 """
 
-import os
 import json
-import subprocess
-import tempfile
 from pathlib import Path
-from typing import Dict, Any, Optional
-import yaml
 
 class DashboardDeployer:
     """Proper dashboard deployment without embedding JSON in K8s YAML"""

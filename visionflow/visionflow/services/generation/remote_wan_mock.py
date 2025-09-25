@@ -5,11 +5,10 @@ For testing the remote WAN integration locally
 
 import asyncio
 import time
-import uuid
 from typing import Dict, Any
 from pathlib import Path
 
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI
 from pydantic import BaseModel, Field
 import uvicorn
 

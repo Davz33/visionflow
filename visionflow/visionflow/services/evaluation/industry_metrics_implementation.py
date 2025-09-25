@@ -5,8 +5,7 @@ Based on latest research: LPIPS, FVMD, CLIP, ETVA
 
 import torch
 import numpy as np
-from typing import List, Dict, Optional, Tuple, Any
-from pathlib import Path
+from typing import List, Dict, Optional, Any
 import logging
 
 from .quality_metrics import IndustryStandardMetrics

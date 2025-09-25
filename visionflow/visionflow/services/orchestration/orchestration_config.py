@@ -5,7 +5,6 @@ Based on 2024 best practices for adaptive agent coordination
 
 from enum import Enum
 from typing import Dict, List, Optional
-from pathlib import Path
 from pydantic import BaseModel, Field
 
 from ...shared.config import get_settings

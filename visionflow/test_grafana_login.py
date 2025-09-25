@@ -4,7 +4,6 @@ Test Grafana Login Credentials
 """
 
 import requests
-import json
 
 def test_grafana_login():
     """Test Grafana login with different credential combinations"""
@@ -68,7 +67,6 @@ def test_grafana_login():
 def check_grafana_config():
     """Check Grafana configuration from Kubernetes"""
     import subprocess
-    import json
     
     print("\n🔧 Checking Grafana Configuration")
     print("=" * 40)

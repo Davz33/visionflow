@@ -8,8 +8,6 @@ This module allows easy switching between different LLM providers:
 """
 
 from enum import Enum
-from typing import Optional
-from pathlib import Path
 import os
 
 class LLMProvider(Enum):

@@ -4,10 +4,8 @@ Integrate evaluation metrics into the existing evaluation service.
 This script adds Prometheus metrics to track evaluation performance.
 """
 
-import os
 import re
 from pathlib import Path
-from typing import List, Dict, Any
 
 class EvaluationMetricsIntegrator:
     """Integrate Prometheus metrics into evaluation services"""

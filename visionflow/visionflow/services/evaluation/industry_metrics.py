@@ -8,13 +8,11 @@ Based on slide 8: Industry metrics for objective evaluation
 - CLIP: Text-Video Alignment (semantic and factual match)
 """
 
-import asyncio
 import torch
 import torch.nn.functional as F
 import numpy as np
 import cv2
-from pathlib import Path
-from typing import Dict, List, Tuple, Optional, Any
+from typing import Dict, List, Any
 from dataclasses import dataclass
 
 try:

@@ -6,7 +6,6 @@ Production FastAPI application for video evaluation services.
 import os
 import asyncio
 from contextlib import asynccontextmanager
-from typing import Dict, Any
 
 from fastapi import FastAPI, HTTPException, BackgroundTasks
 from fastapi.middleware.cors import CORSMiddleware
@@ -14,9 +13,7 @@ from prometheus_fastapi_instrumentator import Instrumentator
 
 from ..shared.monitoring import (
     get_logger, 
-    track_video_generation,
     update_job_queue_length,
-    update_job_progress,
     update_success_rate,
     VIDEO_GENERATION_JOBS_ACTIVE
 )

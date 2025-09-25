@@ -25,7 +25,6 @@ from visionflow.services.evaluation.video_evaluation_orchestrator import (
     VideoEvaluationOrchestrator, SamplingStrategy
 )
 from visionflow.services.evaluation.confidence_manager import ConfidenceManager
-from visionflow.services.generation.video_metadata_tracker import metadata_tracker
 
 async def test_dataset_evaluation():
     """Test evaluation using the created test dataset"""

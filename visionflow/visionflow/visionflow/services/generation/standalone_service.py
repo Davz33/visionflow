@@ -14,7 +14,7 @@ import uvicorn
 
 from .wan_model_service import enhanced_generation_service
 from ...shared.config import get_settings
-from ...shared.models import VideoGenerationRequest, GenerationResult
+from ...shared.models import VideoGenerationRequest
 from ...shared.monitoring import get_logger, setup_logging
 
 # Setup logging

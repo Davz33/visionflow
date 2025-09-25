@@ -7,7 +7,7 @@ Run this to verify metrics are working correctly.
 import time
 import random
 from visionflow.services.evaluation.metrics import (
-    record_evaluation_metrics, start_metrics_server,
+    start_metrics_server,
     increment_evaluation_counter, observe_evaluation_score
 )
 

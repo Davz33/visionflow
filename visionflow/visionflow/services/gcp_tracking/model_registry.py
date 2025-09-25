@@ -4,10 +4,8 @@ Replaces MLFlow Model Registry with native GCP services
 """
 
 import json
-import yaml
 from datetime import datetime
 from typing import Any, Dict, List, Optional
-from pathlib import Path
 from enum import Enum
 
 from google.cloud import storage

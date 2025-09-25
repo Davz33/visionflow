@@ -4,8 +4,6 @@ Script to manually import the VisionFlow dashboard into Grafana
 """
 
 import requests
-import json
-import time
 import os
 
 def import_dashboard():

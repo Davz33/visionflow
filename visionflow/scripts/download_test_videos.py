@@ -4,11 +4,9 @@ Download test videos for evaluation from reliable sources.
 This script downloads short videos (10 seconds or less) for testing the evaluation system.
 """
 
-import os
 import json
 import subprocess
 from pathlib import Path
-from typing import List, Dict, Any
 import time
 
 # Configuration

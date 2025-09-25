@@ -6,7 +6,6 @@ Verifies that the complete setup works end-to-end
 
 import asyncio
 import os
-import sys
 import time
 import json
 from pathlib import Path

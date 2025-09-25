@@ -8,9 +8,8 @@ import gc
 import hashlib
 import os
 import time
-import uuid
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Union, Tuple
+from typing import Any, Dict, List, Union
 
 import cv2
 import numpy as np

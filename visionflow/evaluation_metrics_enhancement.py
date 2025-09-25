@@ -1,7 +1,6 @@
 # Add these metrics to your evaluation service
 
-from prometheus_client import Counter, Histogram, Gauge, start_http_server
-import time
+from prometheus_client import Counter, Histogram, start_http_server
 
 # Evaluation metrics
 evaluation_total = Counter(

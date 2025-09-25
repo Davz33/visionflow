@@ -4,11 +4,9 @@ Human Review Workflow Startup Script
 Quick launcher for the complete human review workflow system
 """
 
-import os
 import sys
 import time
 import subprocess
-import signal
 from pathlib import Path
 from typing import List
 

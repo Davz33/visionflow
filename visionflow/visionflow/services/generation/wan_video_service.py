@@ -1,14 +1,12 @@
 """Real WAN 2.1 Video Generation Service using HuggingFace Diffusers."""
 
-import asyncio
 import gc
 import os
-import tempfile
 import time
 import torch
 import psutil
 from pathlib import Path
-from typing import Dict, Any, Optional, Union
+from typing import Dict, Any, Optional
 from dataclasses import dataclass
 
 from huggingface_hub import login
@@ -290,7 +288,6 @@ class WanVideoGenerationService:
                 # For MPS, we rely on system-level memory management
                 # Force garbage collection is more important for unified memory
                 logger.info("🍎 MPS memory cleanup - relying on unified memory management")
-                import threading
                 import time
                 
                 # Give the system a moment to release memory

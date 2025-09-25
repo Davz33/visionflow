@@ -5,21 +5,15 @@ Supports multiple public datasets for comprehensive evaluation with focus on
 large-scale text-to-video datasets like MSR-VTT, LSMDC, and others.
 """
 
-import os
 import sys
 import json
 import requests
-import zipfile
-import tarfile
 import time
-import random
 from pathlib import Path
-from typing import List, Dict, Any, Tuple
+from typing import List, Tuple
 from dataclasses import dataclass
-import subprocess
 from datetime import datetime
 import concurrent.futures
-from urllib.parse import urlparse
 
 @dataclass
 class DatasetInfo:

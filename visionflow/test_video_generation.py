@@ -6,7 +6,6 @@ Tests the video generation endpoint and monitors response
 
 import requests
 import json
-import time
 from datetime import datetime
 
 def test_video_generation():

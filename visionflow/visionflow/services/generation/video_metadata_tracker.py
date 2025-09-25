@@ -13,9 +13,8 @@ import sqlite3
 import uuid
 from datetime import datetime
 from pathlib import Path
-from typing import Dict, List, Optional, Any, Union
+from typing import Dict, List, Optional, Any
 from dataclasses import dataclass, asdict
-from contextlib import contextmanager
 
 from ...shared.monitoring import get_logger
 from ...shared.models import VideoGenerationRequest, VideoQuality

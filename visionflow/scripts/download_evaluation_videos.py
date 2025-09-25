@@ -4,11 +4,9 @@ Download reliable evaluation videos for video generation evaluation.
 This script downloads videos from industry-standard benchmarks and datasets.
 """
 
-import os
 import json
 import subprocess
 from pathlib import Path
-from typing import List, Dict, Any
 import time
 
 # Configuration

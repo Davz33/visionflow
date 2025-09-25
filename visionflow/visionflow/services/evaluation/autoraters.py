@@ -4,16 +4,12 @@ Implementing 2024 best practices for AI-powered evaluation
 """
 
 import asyncio
-import json
 import os
-import uuid
 from datetime import datetime
-from pathlib import Path
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, Dict, List, Optional
 import cv2
 import numpy as np
 
-from langchain.tools import tool
 from langchain_google_vertexai import ChatVertexAI
 from langchain.schema import HumanMessage, SystemMessage
 from pydantic import BaseModel, Field

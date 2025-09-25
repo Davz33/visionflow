@@ -10,10 +10,7 @@ This script:
 import os
 import json
 import requests
-import subprocess
 from pathlib import Path
-from typing import Dict, Any, Optional
-import time
 
 # Configuration
 GRAFANA_URL = os.getenv('GRAFANA_URL', 'http://localhost:30300')

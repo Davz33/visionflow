@@ -9,7 +9,6 @@ following industry best practices for ML evaluation datasets.
 
 import asyncio
 import json
-import os
 import requests
 import sys
 import uuid
@@ -24,7 +23,6 @@ sys.path.insert(0, str(project_root))
 from visionflow.services.generation.video_metadata_tracker import (
     metadata_tracker, VideoGenerationMetadata
 )
-from visionflow.shared.models import VideoQuality
 
 # Sample video-prompt pairs for testing (common text-to-video prompts)
 SAMPLE_PROMPTS = [

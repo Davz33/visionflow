@@ -7,7 +7,6 @@ Tests both manual invocation and Celery task execution.
 import asyncio
 import logging
 import sys
-from datetime import datetime
 from pathlib import Path
 
 # Add the project root to the path

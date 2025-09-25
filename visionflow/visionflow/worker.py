@@ -1,6 +1,5 @@
 """Celery worker configuration for VisionFlow video generation tasks."""
 
-import os
 from celery import Celery
 from celery.schedules import crontab
 from .shared.config import get_settings

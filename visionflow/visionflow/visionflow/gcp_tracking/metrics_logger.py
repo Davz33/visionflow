@@ -5,12 +5,11 @@ Provides Prometheus-compatible metrics logging to Cloud Monitoring
 
 import time
 from datetime import datetime
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, Optional
 from collections import defaultdict
 
 from google.cloud import monitoring_v3
-from google.cloud.monitoring_v3 import TimeSeries, Point, TimeInterval, Metric
-from google.cloud.monitoring_v3.types import MetricKind, ValueType
+from google.cloud.monitoring_v3 import TimeSeries, Point
 from prometheus_client import CollectorRegistry, Counter, Histogram, Gauge, start_http_server
 
 from ...shared.config import get_settings

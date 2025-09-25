@@ -5,8 +5,6 @@ Tests the current health services and monitoring setup
 """
 
 import requests
-import time
-import json
 from datetime import datetime
 
 def test_api_health():

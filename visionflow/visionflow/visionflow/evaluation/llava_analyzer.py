@@ -5,12 +5,10 @@ This module provides a local LLaVA implementation for analyzing video content,
 replacing the API-based Gemini Pro Vision for subjective assessments.
 """
 
-import asyncio
 import json
 import logging
 import numpy as np
-from pathlib import Path
-from typing import Dict, Any, List, Optional
+from typing import Dict, Any, List
 import torch
 from PIL import Image
 import cv2

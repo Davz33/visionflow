@@ -13,15 +13,12 @@ import asyncio
 import gc
 import numpy as np
 import torch
-import torch.nn.functional as F
 from typing import List, Dict, Any, Optional, Tuple
-from pathlib import Path
 import cv2
 from PIL import Image
 
 # Model imports (installed via requirements)
 import lpips
-import clip
 from transformers import CLIPProcessor, CLIPModel
 from transformers import LlavaNextProcessor, LlavaNextForConditionalGeneration
 

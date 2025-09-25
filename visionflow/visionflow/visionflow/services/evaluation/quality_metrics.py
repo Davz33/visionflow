@@ -7,8 +7,7 @@ Enhanced with industry-standard metrics: LPIPS, FVMD, CLIP, ETVA
 import uuid
 from datetime import datetime
 from enum import Enum
-from typing import Any, Dict, List, Optional, Union
-from pathlib import Path
+from typing import Any, Dict, List, Optional
 from pydantic import BaseModel, Field
 
 from ...shared.monitoring import get_logger

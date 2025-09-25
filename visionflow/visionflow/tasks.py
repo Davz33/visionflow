@@ -10,9 +10,8 @@ import json
 
 from celery import Task
 from .worker import celery_app
-from .shared.config import get_settings
 from .shared.database import get_session_factory, VideoGenerationJob
-from .shared.models import JobStatus, VideoGenerationRequest, VideoQuality
+from .shared.models import JobStatus
 
 logger = logging.getLogger(__name__)
 

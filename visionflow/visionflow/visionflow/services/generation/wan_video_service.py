@@ -1,13 +1,11 @@
 """Real WAN 2.1 Video Generation Service using HuggingFace Diffusers."""
 
-import asyncio
 import gc
 import os
-import tempfile
 import torch
 import psutil
 from pathlib import Path
-from typing import Dict, Any, Optional, Union
+from typing import Dict, Any
 from dataclasses import dataclass
 
 from huggingface_hub import login

@@ -9,7 +9,7 @@ import uuid
 from datetime import datetime
 from typing import Dict, Any, Optional, List
 
-from fastapi import FastAPI, HTTPException, BackgroundTasks, Depends
+from fastapi import FastAPI, HTTPException, BackgroundTasks
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel, Field
 
@@ -17,7 +17,7 @@ from .langgraph_orchestrator import get_orchestrator
 from .agent_orchestrator import get_agent
 from ...shared.config import get_settings
 from ...shared.monitoring import get_logger
-from ...shared.models import JobResponse, JobStatusResponse
+from ...shared.models import JobResponse
 
 logger = get_logger("orchestration_service")
 settings = get_settings()

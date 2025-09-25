@@ -4,8 +4,6 @@ Verifies that MLFlow has been successfully replaced with GCP services
 """
 
 import asyncio
-import json
-from datetime import datetime
 
 from services.gcp_tracking import get_cloud_tracker, get_model_registry, get_metrics_logger
 from services.gcp_tracking.model_registry import ModelStage

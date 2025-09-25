@@ -9,7 +9,6 @@ from typing import Any, Callable, Dict, Optional
 
 import structlog
 from prometheus_client import Counter, Histogram, Info, start_http_server, Gauge
-from prometheus_client.core import CollectorRegistry
 
 from .config import get_settings
 

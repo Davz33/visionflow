@@ -12,8 +12,7 @@ from pathlib import Path
 from google.cloud import logging as cloud_logging
 from google.cloud import monitoring_v3
 from google.cloud import storage
-from google.cloud.monitoring_v3 import TimeSeries, Point, TimeInterval
-from google.cloud.monitoring_v3 import MetricDescriptor
+from google.cloud.monitoring_v3 import TimeSeries, Point
 
 from ...shared.config import get_settings
 from ...shared.monitoring import get_logger

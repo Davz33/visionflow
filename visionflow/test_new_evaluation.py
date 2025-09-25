@@ -5,7 +5,6 @@ Tests the autoraters and autoevals workflow without dependencies on existing mod
 """
 
 import asyncio
-import os
 import sys
 import time
 from pathlib import Path

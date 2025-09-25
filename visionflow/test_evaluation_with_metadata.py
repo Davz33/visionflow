@@ -5,7 +5,6 @@ Demonstrates industry best practices for video-prompt mapping.
 """
 
 import asyncio
-import os
 import sys
 import time
 from pathlib import Path

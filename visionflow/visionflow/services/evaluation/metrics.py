@@ -4,8 +4,7 @@ Provides Prometheus metrics for video evaluation performance tracking.
 """
 
 from prometheus_client import Counter, Histogram, Gauge, start_http_server
-from typing import Dict, Any
-import time
+from typing import Any
 
 # Evaluation Counters
 evaluation_total = Counter(

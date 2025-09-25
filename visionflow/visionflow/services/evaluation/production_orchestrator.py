@@ -9,17 +9,16 @@ This orchestrator provides enterprise-grade video evaluation with:
 - Efficient resource utilization
 """
 
-import asyncio
 import time
 import uuid
 from dataclasses import dataclass
 from enum import Enum
-from typing import List, Dict, Any, Optional
+from typing import List, Dict, Any
 import cv2
 import numpy as np
 
 from ...shared.monitoring import get_logger
-from .production_models import ProductionEvaluationModels, get_production_models
+from .production_models import get_production_models
 from .confidence_manager import ConfidenceManager, ConfidenceLevel
 from .score_aggregator import ScoreAggregator
 

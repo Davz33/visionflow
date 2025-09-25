@@ -28,7 +28,6 @@ from visionflow.services.evaluation.video_evaluation_orchestrator import (
     VideoEvaluationOrchestrator, SamplingStrategy
 )
 from visionflow.services.evaluation.confidence_manager import ConfidenceManager
-from visionflow.services.generation.video_metadata_tracker import metadata_tracker
 
 
 async def evaluate_single_video(

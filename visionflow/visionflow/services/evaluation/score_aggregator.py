@@ -7,9 +7,8 @@ Based on slides 15-19: Score Aggregation with multiple complementary methods.
 
 import numpy as np
 from enum import Enum
-from typing import Dict, List, Tuple, Optional, Any
+from typing import Dict, List
 from dataclasses import dataclass
-import math
 
 from ...shared.monitoring import get_logger
 from .video_evaluation_orchestrator import DimensionScore, EvaluationDimension

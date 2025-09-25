@@ -3,19 +3,13 @@ Continuous Learning and Improvement System for Autoraters and Autoevals
 Human-in-the-loop feedback integration and adaptive evaluation improvement
 """
 
-import asyncio
-import json
 import uuid
 from datetime import datetime, timedelta
-from typing import Any, Dict, List, Optional, Tuple, Union
-from pathlib import Path
+from typing import Any, Dict, List, Optional
 from enum import Enum
-import numpy as np
 
 from pydantic import BaseModel, Field
 
-from .quality_metrics import EvaluationResult, QualityDimensions
-from .benchmarks import BenchmarkComparison
 from ...shared.config import get_settings
 from ...shared.monitoring import get_logger
 from ...shared.database import DatabaseManager

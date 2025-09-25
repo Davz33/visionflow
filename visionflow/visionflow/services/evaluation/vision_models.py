@@ -7,16 +7,13 @@ import asyncio
 import base64
 import io
 import json
-from typing import Any, Dict, List, Optional, Tuple
-from pathlib import Path
+from typing import Any, Dict, List, Optional
 import cv2
 import numpy as np
 from PIL import Image
 
 from langchain_google_vertexai import ChatVertexAI
 from langchain.schema import HumanMessage, SystemMessage
-from google.cloud import aiplatform
-from google.cloud.aiplatform.gapic.schema import predict
 
 from ...shared.config import get_settings
 from ...shared.monitoring import get_logger

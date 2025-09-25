@@ -3,9 +3,7 @@ Standalone video generation service
 Can run independently or as part of the main application
 """
 
-import asyncio
 import time
-import uuid
 from datetime import datetime
 from typing import Dict, Any, Optional
 
@@ -16,7 +14,7 @@ import uvicorn
 
 from .wan_model_service import enhanced_generation_service
 from ...shared.config import get_settings
-from ...shared.models import VideoGenerationRequest, GenerationResult
+from ...shared.models import VideoGenerationRequest
 from ...shared.monitoring import get_logger, setup_logging
 
 # Setup logging

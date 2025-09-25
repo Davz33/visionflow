@@ -4,7 +4,6 @@ M4 Max Optimized WAN Generation Service
 Persistent caching + MPS acceleration for blazing fast generation
 """
 
-import asyncio
 import os
 import sys
 from datetime import datetime
@@ -29,7 +28,7 @@ os.environ['HF_HUB_OFFLINE'] = '0'  # Allow fallback but prefer cache
 print(f"🔥 CACHE FORCED: {CACHE_DIR}")
 print(f"📦 Cache size: 8.6GB WAN model ready!")
 
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI
 from pydantic import BaseModel
 import uvicorn
 

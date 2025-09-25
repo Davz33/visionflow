@@ -10,7 +10,6 @@ import json
 from pathlib import Path
 from typing import List, Dict, Any
 from dataclasses import dataclass
-from enum import Enum
 
 from ...shared.monitoring import get_logger
 from .animation_quality_assessor import AnimationQualityIssue, QualitySeverity

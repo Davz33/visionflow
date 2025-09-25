@@ -12,8 +12,7 @@ from pathlib import Path
 from ...shared.config import get_settings
 from ...shared.models import (
     VideoGenerationRequest,
-    GenerationResult,
-    VideoQuality
+    GenerationResult
 )
 from ...shared.monitoring import get_logger
 

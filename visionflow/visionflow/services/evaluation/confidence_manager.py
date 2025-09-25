@@ -5,8 +5,6 @@ Implements automated flagging and decision making based on confidence levels.
 Based on slide 14: Confidence Management with 5 ranges and automated decisions.
 """
 
-import asyncio
-import time
 from datetime import datetime, timedelta
 from enum import Enum
 from typing import Dict, List, Optional, Tuple, Any

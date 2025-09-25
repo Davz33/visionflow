@@ -4,9 +4,7 @@ Integration test script for the VisionFlow API.
 This script starts the FastAPI application and tests all endpoints with proper service initialization.
 """
 
-import asyncio
 import sys
-import uvicorn
 from pathlib import Path
 import requests
 import time
@@ -21,8 +19,6 @@ def test_api_integration():
     
     # Start the server in a separate process
     import subprocess
-    import signal
-    import os
     
     # Start the server
     server_process = subprocess.Popen([

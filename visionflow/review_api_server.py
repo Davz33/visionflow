@@ -4,8 +4,6 @@ Review Workflow API Server
 FastAPI server for human review workflow dashboard
 """
 
-import json
-import os
 from typing import Dict, List, Any, Optional
 from datetime import datetime
 from pathlib import Path
@@ -21,7 +19,7 @@ except ImportError:
     print("❌ FastAPI dependencies not found. Installing...")
     import subprocess
     subprocess.check_call(["pip", "install", "fastapi", "uvicorn", "python-multipart"])
-    from fastapi import FastAPI, HTTPException, status
+    from fastapi import FastAPI, HTTPException
     from fastapi.middleware.cors import CORSMiddleware
     from fastapi.staticfiles import StaticFiles
     from fastapi.responses import HTMLResponse
