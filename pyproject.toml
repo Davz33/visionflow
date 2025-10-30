@@ -330,11 +330,23 @@ build-docs = "sphinx-build -b html docs/ docs/_build"
 
 # Environments: Compose features together
 [tool.pixi.environments]
-default = {features = ["dev"], solve-group = "default"}
+# Base production environment (core package only, no optional dependencies)
+default = {features = [], solve-group = "default"}
+# Production with development/testing tools
+dev = {features = ["dev"], solve-group = "default"}
+# Pure production environment
 prod = {features = [], solve-group = "prod-group"}
+# Production with testing (maintains version consistency)
+prod-test = {features = ["dev"], solve-group = "prod-group"}
+# ML evaluation environment
 ml = {features = ["ml_evaluation"], solve-group = "default"}
+# LLaVA model support
 llava = {features = ["llava"], solve-group = "default"}
+# GCP integration
 gcp = {features = ["gcp"], solve-group = "default"}
+# Monitoring tools
 monitoring = {features = ["monitoring"], solve-group = "default"}
-full = {features = ["dev", "ml_evaluation", "production", "llava", "monitoring", "gcp"], solve-group = "default"}
-prod-test = {features = ["production", "dev"], solve-group = "prod-group"}
+# Documentation
+docs = {features = ["docs"], solve-group = "default"}
+# Full environment with all features
+full = {features = ["dev", "ml_evaluation", "production", "llava", "monitoring", "gcp", "docs"], solve-group = "default"}
