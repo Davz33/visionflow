@@ -145,6 +145,33 @@ VisionFlow is a production-ready platform for AI-powered video generation and au
 - Google Cloud Platform account (for GCP services)
 - NVIDIA GPU with CUDA support (for local video generation)
 
+### Optional Dependencies
+
+VisionFlow uses organized optional dependencies managed through `pyproject.toml`. Install additional features as needed:
+
+```bash
+# For ML evaluation features
+pip install visionflow[ml_evaluation]
+
+# For production deployment
+pip install visionflow[production]
+
+# For LLaVA model support
+pip install visionflow[llava]
+
+# For monitoring (Grafana/Prometheus)
+pip install visionflow[monitoring]
+
+# For Google Cloud integration
+pip install visionflow[gcp]
+
+# For development and testing
+pip install visionflow[dev]
+
+# For all optional dependencies
+pip install visionflow[all]
+```
+
 ## 🚀 Quick Start
 
 ### Local Development
