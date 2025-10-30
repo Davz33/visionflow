@@ -1,0 +1,42 @@
+FROM python:3.11-slim
+
+# Set working directory
+WORKDIR /app
+
+# Install system dependencies required by the API runtime
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    libpq-dev \
+    gcc \
+    g++ \
+    libgl1-mesa-dri \
+    libglib2.0-0 \
+    libsm6 \
+    libxext6 \
+    libxrender-dev \
+    libgomp1 \
+    curl \
+    && rm -rf /var/lib/apt/lists/*
+
+# Copy project metadata and source
+COPY pyproject.toml README.md /app/
+COPY src/ /app/src/
+COPY scripts/ /app/scripts/
+COPY config/ /app/config/
+COPY data/ /app/data/
+
+# Install application (installs dependencies defined in pyproject.toml)
+RUN pip install --no-cache-dir --upgrade pip && \
+    pip install --no-cache-dir .
+
+# Create runtime directories
+RUN mkdir -p /app/logs /app/models /app/generated
+
+# Environment configuration
+ENV PYTHONPATH=/app/src \
+    PYTHONUNBUFFERED=1
+
+# Expose API port
+EXPOSE 8000
+
+# Run the FastAPI application
+CMD ["uvicorn", "visionflow.api.main:app", "--host", "0.0.0.0", "--port", "8000"]

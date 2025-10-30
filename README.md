@@ -145,6 +145,99 @@ VisionFlow is a production-ready platform for AI-powered video generation and au
 - Google Cloud Platform account (for GCP services)
 - NVIDIA GPU with CUDA support (for local video generation)
 
+### Optional Dependencies
+
+VisionFlow uses organized optional dependencies managed through `pyproject.toml`. Install additional features as needed:
+
+```bash
+# For ML evaluation features
+pip install visionflow[ml_evaluation]
+
+# For production deployment
+pip install visionflow[production]
+
+# For LLaVA model support
+pip install visionflow[llava]
+
+# For monitoring (Grafana/Prometheus)
+pip install visionflow[monitoring]
+
+# For Google Cloud integration
+pip install visionflow[gcp]
+
+# For development and testing
+pip install visionflow[dev]
+
+# For all optional dependencies
+pip install visionflow[all]
+```
+
+### Using Pixi for Environment Management
+
+VisionFlow includes native **pixi** support for flexible environment management. Pixi provides isolated, reproducible environments with native feature composition.
+
+**Install Pixi:**
+```bash
+curl -fsSL https://pixi.sh/install.sh | bash
+```
+
+**Available Pixi Environments:**
+
+```bash
+# Development environment (default) with testing tools
+pixi run --environment default test
+
+# Production-only dependencies (no dev tools)
+pixi shell --environment prod
+
+# Production dependencies + test tools (same versions)
+pixi run --environment prod-test test
+
+# ML/AI evaluation environment
+pixi run --environment ml python scripts/evaluate_large_scale_dataset.py
+
+# LLaVA model support environment
+pixi run --environment llava python
+
+# Monitoring tools environment
+pixi run --environment monitoring python
+
+# GCP integration environment
+pixi run --environment gcp python
+
+# Full environment with all optional features
+pixi run --environment full test
+```
+
+**Available Tasks in Environments:**
+
+```bash
+# Run tests
+pixi run test
+
+# Run linting
+pixi run lint
+
+# Format code
+pixi run format
+
+# Build documentation
+pixi run --environment docs build-docs
+```
+
+**Install Dependencies for Specific Environment:**
+
+```bash
+# Install default environment
+pixi install
+
+# Install specific environment
+pixi install --environment prod
+
+# Install all environments
+pixi install --all
+```
+
 ## 🚀 Quick Start
 
 ### Local Development
@@ -170,7 +263,7 @@ VisionFlow is a production-ready platform for AI-powered video generation and au
 
 4. **Start services with Docker Compose**
    ```bash
-   docker-compose -f docker-compose.dev.yml up -d
+   docker-compose -f infra/docker/docker-compose.dev.yml up -d
    ```
 
 5. **Access the API**
@@ -185,7 +278,7 @@ VisionFlow is a production-ready platform for AI-powered video generation and au
 1. **Configure Kubernetes secrets**
    ```bash
    # Use the setup script to configure secrets
-   cd visionflow/k8s/
+   cd infra/k8s/visionflow/k8s/
    ./setup-secrets.sh
    
    # Or manually apply secrets
@@ -196,7 +289,7 @@ VisionFlow is a production-ready platform for AI-powered video generation and au
 2. **Deploy the application**
    ```bash
    # Deploy all components
-   kubectl apply -f k8s/
+   kubectl apply -f infra/k8s/visionflow/k8s/
    
    # Verify deployment
    kubectl get pods -n visionflow
@@ -214,13 +307,13 @@ VisionFlow is a production-ready platform for AI-powered video generation and au
 
 1. **Build and run with Docker Compose**
    ```bash
-   docker-compose -f docker-compose.production.yml up -d
+   docker-compose -f infra/docker/visionflow/docker-compose.production.yml up -d
    ```
 
 2. **Or use individual Dockerfiles**
    ```bash
    # Build API service
-   docker build -f visionflow/docker/Dockerfile.api -t visionflow-api .
+   docker build -f infra/docker/visionflow/Dockerfile.api -t visionflow-api .
    
    # Run with proper environment
    docker run -d --name visionflow-api \
@@ -369,7 +462,7 @@ pip install -r requirements_ml_evaluation.txt
 pytest visionflow/tests/
 
 # Run with coverage
-pytest --cov=visionflow visionflow/tests/
+pytest --cov=src.visionflow visionflow/tests/
 ```
 
 ### Test Datasets
