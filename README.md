@@ -172,6 +172,72 @@ pip install visionflow[dev]
 pip install visionflow[all]
 ```
 
+### Using Pixi for Environment Management
+
+VisionFlow includes native **pixi** support for flexible environment management. Pixi provides isolated, reproducible environments with native feature composition.
+
+**Install Pixi:**
+```bash
+curl -fsSL https://pixi.sh/install.sh | bash
+```
+
+**Available Pixi Environments:**
+
+```bash
+# Development environment (default) with testing tools
+pixi run --environment default test
+
+# Production-only dependencies (no dev tools)
+pixi shell --environment prod
+
+# Production dependencies + test tools (same versions)
+pixi run --environment prod-test test
+
+# ML/AI evaluation environment
+pixi run --environment ml python scripts/evaluate_large_scale_dataset.py
+
+# LLaVA model support environment
+pixi run --environment llava python
+
+# Monitoring tools environment
+pixi run --environment monitoring python
+
+# GCP integration environment
+pixi run --environment gcp python
+
+# Full environment with all optional features
+pixi run --environment full test
+```
+
+**Available Tasks in Environments:**
+
+```bash
+# Run tests
+pixi run test
+
+# Run linting
+pixi run lint
+
+# Format code
+pixi run format
+
+# Build documentation
+pixi run --environment docs build-docs
+```
+
+**Install Dependencies for Specific Environment:**
+
+```bash
+# Install default environment
+pixi install
+
+# Install specific environment
+pixi install --environment prod
+
+# Install all environments
+pixi install --all
+```
+
 ## 🚀 Quick Start
 
 ### Local Development
