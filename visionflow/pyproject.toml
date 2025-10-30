@@ -114,9 +114,12 @@ gcp = [
 Homepage = "https://github.com/davz3/visionflow"
 Repository = "https://github.com/davz3/visionflow.git"
 
+[tool.setuptools.package_dir]
+"" = "src"
+
 [tool.setuptools.packages.find]
-where = ["visionflow"]
-exclude = ["services/gcp_tracking*", "services/mflow_integration*"]
+where = ["src"]
+include = ["visionflow*"]
 
 [tool.black]
 line-length = 88
