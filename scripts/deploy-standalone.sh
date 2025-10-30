@@ -28,40 +28,35 @@ if ! kubectl cluster-info &> /dev/null; then
 fi
 
 # Build images first
-echo "🔨 Building Docker images..."
+echo "🔨 Building Docker image..."
 bash "$SCRIPT_DIR/build-standalone-images.sh"
 
-# Check if using kind and load images
+# Check if using kind and load image
 if kubectl config current-context | grep -q "kind"; then
-    echo "🐋 Loading images into kind cluster..."
-    kind load docker-image visionflow-generation-health:local --name visionflow
+    echo "🐋 Loading image into kind cluster..."
     kind load docker-image visionflow-generation:local --name visionflow
 fi
 
-# Deploy health service first (recommended for testing)
-echo "📦 Deploying Generation Health Service..."
-kubectl apply -f "$K8S_DIR/generation-health-service.yaml"
+# Deploy generation service
+echo "📦 Deploying Generation Service..."
+kubectl apply -f "$K8S_DIR/generation-service.yaml"
 
-# Wait for health service to be ready
-echo "⏳ Waiting for health service to be ready..."
-kubectl wait --for=condition=available --timeout=300s deployment/generation-health-service -n visionflow-generation-health
+# Wait for deployment to be ready
+echo "⏳ Waiting for generation service to be ready..."
+kubectl wait --for=condition=available --timeout=300s deployment/generation-service -n visionflow-generation
 
 # Show status
-echo "✅ Health service deployment complete!"
+echo "✅ Generation service deployment complete!"
 echo ""
-echo "📊 Health service status:"
-kubectl get pods -n visionflow-generation-health
+echo "📊 Generation service status:"
+kubectl get pods -n visionflow-generation
 
 echo ""
-echo "🌐 Health service endpoint:"
-echo "   Generation Health: http://localhost:30002/health"
-
-echo ""
-echo "💡 To deploy the full generation service (with ML):"
-echo "   kubectl apply -f k8s/local/standalone/generation-service.yaml"
+echo "🌐 Generation service endpoint:"
+echo "   http://localhost:30002/health"
 
 echo ""
 echo "📝 Useful commands:"
-echo "   View logs: kubectl logs -f deployment/generation-health-service -n visionflow-generation-health"
+echo "   View logs: kubectl logs -f deployment/generation-service -n visionflow-generation"
 echo "   Test health: curl http://localhost:30002/health"
-echo "   Delete: kubectl delete namespace visionflow-generation-health"
+echo "   Delete: kubectl delete namespace visionflow-generation"

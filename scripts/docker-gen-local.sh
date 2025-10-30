@@ -19,7 +19,7 @@ docker run -it --rm \
   -v "$(pwd)/models:/app/models" \
   -v "$(pwd)/generated:/app/generated" \
   -v "$(pwd)/logs:/app/logs" \
-  -e PYTHONPATH=/app \
+  -e PYTHONPATH=/app/src \
   visionflow-generation:local
 
 echo "✅ Container stopped"
