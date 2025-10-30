@@ -112,69 +112,52 @@ gcp = [
 ]
 
 ml_evaluation = [
-    # Transformers and models
     "transformers>=4.35.0",
     "accelerate>=0.24.0",
     "diffusers>=0.24.0",
     "timm>=0.9.10",
     "huggingface-hub>=0.17.0",
-    # Evaluation models
     "lpips>=0.1.4",
     "open-clip-torch>=2.20.0",
-    # Advanced image/video processing
     "scikit-image>=0.21.0",
     "matplotlib>=3.7.0",
     "opencv-python>=4.8.0",
     "imageio>=2.31.0",
     "imageio-ffmpeg>=0.4.9",
-    # ML utilities
     "einops>=0.7.0",
     "safetensors>=0.4.0",
-    # Memory profiling
     "memory-profiler>=0.61.0",
 ]
 
 production = [
-    # Production Database
     "asyncpg>=0.29.0",
-    # Evaluation Models
     "lpips>=0.1.4",
     "open-clip-torch>=2.20.0",
     "transformers>=4.35.0",
     "torchvision>=0.16.0",
     "torchaudio>=2.1.0",
-    # Vision Models
     "timm>=0.9.10",
-    # Scientific Computing
     "numpy>=1.24.0",
     "scipy>=1.11.0",
     "scikit-image>=0.21.0",
     "matplotlib>=3.7.0",
-    # Video Processing
     "opencv-python>=4.8.0",
     "imageio>=2.31.0",
     "imageio-ffmpeg>=0.4.9",
-    # ML utilities
     "einops>=0.7.0",
     "safetensors>=0.4.0",
-    # Performance monitoring
     "memory-profiler>=0.61.0",
-    # Cloud deployment
     "uvloop>=0.19.0",
 ]
 
 llava = [
-    # LLaVA-specific dependencies
     "llava-torch>=1.1.0",
     "llava-mmt>=1.1.0",
-    # Image processing
     "Pillow>=9.0.0",
     "opencv-python>=4.8.0",
     "numpy>=1.24.0",
-    # Video processing
     "ffmpeg-python>=0.2.0",
     "av>=10.0.0",
-    # Utilities
     "tqdm>=4.65.0",
     "requests>=2.31.0",
 ]
@@ -247,7 +230,7 @@ ignore = [
 
 [tool.pixi.project]
 channels = ["conda-forge"]
-platforms = ["linux-64", "osx-64", "osx-arm64"]
+platforms = ["linux-64", "osx-64", "osx-arm64", "win-64"]
 
 [tool.pixi.dependencies]
 python = ">=3.10"
@@ -255,9 +238,103 @@ python = ">=3.10"
 [tool.pixi.pypi-dependencies]
 visionflow = { path = ".", editable = true }
 
-[tool.pixi.tasks]
-install-dev = "pip install -e .[dev]"
-install-all = "pip install -e .[all]"
+# Feature: ML Evaluation
+[tool.pixi.feature.ml_evaluation.pypi-dependencies]
+transformers = ">=4.35.0"
+accelerate = ">=0.24.0"
+diffusers = ">=0.24.0"
+timm = ">=0.9.10"
+huggingface-hub = ">=0.17.0"
+lpips = ">=0.1.4"
+open-clip-torch = ">=2.20.0"
+scikit-image = ">=0.21.0"
+matplotlib = ">=3.7.0"
+opencv-python = ">=4.8.0"
+imageio = ">=2.31.0"
+imageio-ffmpeg = ">=0.4.9"
+einops = ">=0.7.0"
+safetensors = ">=0.4.0"
+memory-profiler = ">=0.61.0"
+
+# Feature: Production
+[tool.pixi.feature.production.pypi-dependencies]
+asyncpg = ">=0.29.0"
+lpips = ">=0.1.4"
+open-clip-torch = ">=2.20.0"
+transformers = ">=4.35.0"
+torchvision = ">=0.16.0"
+torchaudio = ">=2.1.0"
+timm = ">=0.9.10"
+numpy = ">=1.24.0"
+scipy = ">=1.11.0"
+scikit-image = ">=0.21.0"
+matplotlib = ">=3.7.0"
+opencv-python = ">=4.8.0"
+imageio = ">=2.31.0"
+imageio-ffmpeg = ">=0.4.9"
+einops = ">=0.7.0"
+safetensors = ">=0.4.0"
+memory-profiler = ">=0.61.0"
+uvloop = ">=0.19.0"
+
+# Feature: LLaVA
+[tool.pixi.feature.llava.pypi-dependencies]
+llava-torch = ">=1.1.0"
+llava-mmt = ">=1.1.0"
+Pillow = ">=9.0.0"
+opencv-python = ">=4.8.0"
+numpy = ">=1.24.0"
+ffmpeg-python = ">=0.2.0"
+av = ">=10.0.0"
+tqdm = ">=4.65.0"
+requests = ">=2.31.0"
+
+# Feature: Monitoring
+[tool.pixi.feature.monitoring.pypi-dependencies]
+grafana-client = ">=3.7.0"
+prometheus-fastapi-instrumentator = ">=6.1.0"
+requests = ">=2.31.0"
+
+# Feature: GCP
+[tool.pixi.feature.gcp.pypi-dependencies]
+google-cloud-storage = ">=2.10.0"
+google-cloud-aiplatform = ">=1.35.0"
+google-cloud-secret-manager = ">=2.16.0"
+google-cloud-logging = ">=3.8.0"
+google-cloud-monitoring = ">=2.16.0"
+google-auth = ">=2.23.0"
+
+# Feature: Development
+[tool.pixi.feature.dev.pypi-dependencies]
+pytest = ">=7.4.0"
+pytest-asyncio = ">=0.21.0"
+pytest-cov = ">=4.1.0"
+black = ">=23.9.0"
+isort = ">=5.12.0"
+mypy = ">=1.6.0"
+ruff = ">=0.1.0"
+pre-commit = ">=3.5.0"
+
+[tool.pixi.feature.dev.tasks]
 test = "pytest tests/"
 lint = "ruff check src/ tests/"
-format = "black src/ tests/"
+format = "black src/ tests/ && isort src/ tests/"
+
+# Feature: Documentation
+[tool.pixi.feature.docs.pypi-dependencies]
+sphinx = ">=7.0.0"
+sphinx-rtd-theme = ">=2.0.0"
+
+[tool.pixi.feature.docs.tasks]
+build-docs = "sphinx-build -b html docs/ docs/_build"
+
+# Environments: Compose features together
+[tool.pixi.environments]
+default = {features = ["dev"], solve-group = "default"}
+prod = {features = [], solve-group = "prod-group"}
+ml = {features = ["ml_evaluation"], solve-group = "default"}
+llava = {features = ["llava"], solve-group = "default"}
+gcp = {features = ["gcp"], solve-group = "default"}
+monitoring = {features = ["monitoring"], solve-group = "default"}
+full = {features = ["dev", "ml_evaluation", "production", "llava", "monitoring", "gcp"], solve-group = "default"}
+prod-test = {features = ["production", "dev"], solve-group = "prod-group"}
