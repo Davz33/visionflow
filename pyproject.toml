@@ -110,6 +110,80 @@ gcp = [
     "google-auth>=2.23.0",
 ]
 
+ml_evaluation = [
+    # Transformers and models
+    "transformers>=4.35.0",
+    "accelerate>=0.24.0",
+    "diffusers>=0.24.0",
+    "timm>=0.9.10",
+    "huggingface-hub>=0.17.0",
+    # Evaluation models
+    "lpips>=0.1.4",
+    "open-clip-torch>=2.20.0",
+    # Advanced image/video processing
+    "scikit-image>=0.21.0",
+    "matplotlib>=3.7.0",
+    "opencv-python>=4.8.0",
+    "imageio>=2.31.0",
+    "imageio-ffmpeg>=0.4.9",
+    # ML utilities
+    "einops>=0.7.0",
+    "safetensors>=0.4.0",
+    # Memory profiling
+    "memory-profiler>=0.61.0",
+]
+
+production = [
+    # Production Database
+    "asyncpg>=0.29.0",
+    # Evaluation Models
+    "lpips>=0.1.4",
+    "open-clip-torch>=2.20.0",
+    "transformers>=4.35.0",
+    "torchvision>=0.16.0",
+    "torchaudio>=2.1.0",
+    # Vision Models
+    "timm>=0.9.10",
+    # Scientific Computing
+    "numpy>=1.24.0",
+    "scipy>=1.11.0",
+    "scikit-image>=0.21.0",
+    "matplotlib>=3.7.0",
+    # Video Processing
+    "opencv-python>=4.8.0",
+    "imageio>=2.31.0",
+    "imageio-ffmpeg>=0.4.9",
+    # ML utilities
+    "einops>=0.7.0",
+    "safetensors>=0.4.0",
+    # Performance monitoring
+    "memory-profiler>=0.61.0",
+    # Cloud deployment
+    "uvloop>=0.19.0",
+]
+
+llava = [
+    # LLaVA-specific dependencies
+    "llava-torch>=1.1.0",
+    "llava-mmt>=1.1.0",
+    # Image processing
+    "Pillow>=9.0.0",
+    "opencv-python>=4.8.0",
+    "numpy>=1.24.0",
+    # Video processing
+    "ffmpeg-python>=0.2.0",
+    "av>=10.0.0",
+    # Utilities
+    "tqdm>=4.65.0",
+    "requests>=2.31.0",
+]
+
+monitoring = [
+    "grafana-client>=3.7.0",
+    "prometheus-fastapi-instrumentator>=6.1.0",
+    "requests>=2.31.0",
+]
+
 [project.urls]
 Homepage = "https://github.com/davz3/visionflow"
 Repository = "https://github.com/davz3/visionflow.git"

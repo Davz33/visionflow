@@ -170,7 +170,7 @@ VisionFlow is a production-ready platform for AI-powered video generation and au
 
 4. **Start services with Docker Compose**
    ```bash
-   docker-compose -f docker-compose.dev.yml up -d
+   docker-compose -f infra/docker/docker-compose.dev.yml up -d
    ```
 
 5. **Access the API**
@@ -185,7 +185,7 @@ VisionFlow is a production-ready platform for AI-powered video generation and au
 1. **Configure Kubernetes secrets**
    ```bash
    # Use the setup script to configure secrets
-   cd visionflow/k8s/
+   cd infra/k8s/visionflow/k8s/
    ./setup-secrets.sh
    
    # Or manually apply secrets
@@ -196,7 +196,7 @@ VisionFlow is a production-ready platform for AI-powered video generation and au
 2. **Deploy the application**
    ```bash
    # Deploy all components
-   kubectl apply -f k8s/
+   kubectl apply -f infra/k8s/visionflow/k8s/
    
    # Verify deployment
    kubectl get pods -n visionflow
@@ -214,13 +214,13 @@ VisionFlow is a production-ready platform for AI-powered video generation and au
 
 1. **Build and run with Docker Compose**
    ```bash
-   docker-compose -f docker-compose.production.yml up -d
+   docker-compose -f infra/docker/visionflow/docker-compose.production.yml up -d
    ```
 
 2. **Or use individual Dockerfiles**
    ```bash
    # Build API service
-   docker build -f visionflow/docker/Dockerfile.api -t visionflow-api .
+   docker build -f infra/docker/visionflow/Dockerfile.api -t visionflow-api .
    
    # Run with proper environment
    docker run -d --name visionflow-api \
@@ -369,7 +369,7 @@ pip install -r requirements_ml_evaluation.txt
 pytest visionflow/tests/
 
 # Run with coverage
-pytest --cov=visionflow visionflow/tests/
+pytest --cov=src.visionflow visionflow/tests/
 ```
 
 ### Test Datasets
