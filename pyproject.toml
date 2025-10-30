@@ -99,6 +99,7 @@ dev = [
 monitoring = [
     "grafana-client>=3.7.0",
     "prometheus-fastapi-instrumentator>=6.1.0",
+    "requests>=2.31.0",
 ]
 
 gcp = [
@@ -175,12 +176,6 @@ llava = [
     "av>=10.0.0",
     # Utilities
     "tqdm>=4.65.0",
-    "requests>=2.31.0",
-]
-
-monitoring = [
-    "grafana-client>=3.7.0",
-    "prometheus-fastapi-instrumentator>=6.1.0",
     "requests>=2.31.0",
 ]
 
