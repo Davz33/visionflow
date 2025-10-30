@@ -334,19 +334,19 @@ build-docs = "sphinx-build -b html docs/ docs/_build"
 default = {features = [], solve-group = "default"}
 # Production with development/testing tools
 dev = {features = ["dev"], solve-group = "default"}
-# Pure production environment
-prod = {features = [], solve-group = "prod-group"}
-# Production with testing (maintains version consistency)
-prod-test = {features = ["dev"], solve-group = "prod-group"}
+# Pure production environment with same dependencies
+prod = {features = [], solve-group = "prod"}
+# Production with testing (maintains consistent versions via solve-group)
+prod-test = {features = ["dev"], solve-group = "prod"}
 # ML evaluation environment
-ml = {features = ["ml_evaluation"], solve-group = "default"}
+ml = {features = ["ml_evaluation"], solve-group = "ml"}
 # LLaVA model support
-llava = {features = ["llava"], solve-group = "default"}
+llava = {features = ["llava"], solve-group = "llava"}
 # GCP integration
-gcp = {features = ["gcp"], solve-group = "default"}
+gcp = {features = ["gcp"], solve-group = "gcp"}
 # Monitoring tools
-monitoring = {features = ["monitoring"], solve-group = "default"}
+monitoring = {features = ["monitoring"], solve-group = "monitoring"}
 # Documentation
-docs = {features = ["docs"], solve-group = "default"}
-# Full environment with all features
-full = {features = ["dev", "ml_evaluation", "production", "llava", "monitoring", "gcp", "docs"], solve-group = "default"}
+docs = {features = ["docs"], solve-group = "docs"}
+# Full environment with all features (separate solve group to avoid conflicts)
+full = {features = ["dev", "ml_evaluation", "production", "llava", "monitoring", "gcp", "docs"], solve-group = "full"}
