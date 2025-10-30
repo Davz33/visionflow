@@ -221,8 +221,8 @@ class LangGraphOrchestrator:
         self.settings = get_settings()
         self.llm = self._initialize_llm()
         self.workflow = self._create_workflow()
-        # self.cloud_tracker = get_cloud_tracker()
-        # self.metrics_logger = get_metrics_logger()
+        self.cloud_tracker = get_cloud_tracker()
+        self.metrics_logger = get_metrics_logger()
         
     def _initialize_llm(self) -> ChatVertexAI:
         """Initialize Vertex AI LLM"""
@@ -544,7 +544,7 @@ class LangGraphOrchestrator:
             job_id = str(uuid.uuid4())
         
         # Start GCP tracking run
-        tracking_run_id = get_cloud_tracker().start_run(
+        tracking_run_id = self.cloud_tracker.start_run(
             run_name=f"langgraph_orchestration_{job_id}",
             tags={
                 "job_id": job_id,
@@ -579,7 +579,7 @@ class LangGraphOrchestrator:
         try:
             # Log initial parameters
             if tracking_run_id:
-                get_cloud_tracker().log_parameters({
+                self.cloud_tracker.log_parameters({
                     "user_request": user_request[:500],
                     "job_id": job_id,
                     "workflow_version": "2.0.0",
@@ -603,10 +603,10 @@ class LangGraphOrchestrator:
                     "complexity_numeric": 1 if result.get("complexity_routing", {}).get("complexity") == "simple" else 3 if result.get("complexity_routing", {}).get("complexity") == "complex" else 2
                 }
                 
-                get_cloud_tracker().log_metrics(metrics)
+                self.cloud_tracker.log_metrics(metrics)
                 
                 # Log to real-time metrics for monitoring
-                get_metrics_logger().log_video_generation_metrics(
+                self.metrics_logger.log_video_generation_metrics(
                     duration=execution_time,
                     status=result["status"],
                     model="vertex_ai_gemini",
@@ -633,17 +633,17 @@ class LangGraphOrchestrator:
             # Log error to GCP tracking
             if tracking_run_id:
                 execution_time = (datetime.utcnow() - start_time).total_seconds()
-                get_cloud_tracker().log_metrics({
+                self.cloud_tracker.log_metrics({
                     "execution_time_seconds": execution_time,
                     "success": 0,
                     "error": 1
                 })
-                get_cloud_tracker().log_parameters({
+                self.cloud_tracker.log_parameters({
                     "error_message": str(e)[:500]
                 })
                 
                 # Log to metrics for monitoring
-                get_metrics_logger().log_video_generation_metrics(
+                self.metrics_logger.log_video_generation_metrics(
                     duration=execution_time,
                     status="failed",
                     model="vertex_ai_gemini",
@@ -663,7 +663,7 @@ class LangGraphOrchestrator:
         finally:
             # End GCP tracking run
             if tracking_run_id:
-                get_cloud_tracker().end_run()
+                self.cloud_tracker.end_run()
 
 
 # Singleton instance

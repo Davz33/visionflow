@@ -361,8 +361,8 @@ class EnhancedMultiAgentOrchestrator:
         self.graph = self._create_multi_agent_graph()
         
         # Monitoring
-        # self.cloud_tracker = get_cloud_tracker()
-        # self.metrics_logger = get_metrics_logger()
+        self.cloud_tracker = get_cloud_tracker()
+        self.metrics_logger = get_metrics_logger()
         
         logger.info("Enhanced multi-agent orchestrator initialized with 2024 best practices")
     

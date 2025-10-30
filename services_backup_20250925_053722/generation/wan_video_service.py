@@ -18,8 +18,6 @@ from ...shared.models import VideoGenerationRequest, VideoQuality
 from ...shared.monitoring import get_logger
 from .resource_config import get_resource_limits, ResourceLimits
 from .video_metadata_tracker import metadata_tracker
-from .m4_optimizations import get_m4_optimizer, is_m4_available
-from .m4_memory_manager import get_m4_memory_manager
 
 logger = get_logger(__name__)
 
@@ -60,17 +58,10 @@ class WanVideoGenerationService:
         self.pipeline = None
         self.model_config = None
         self.generation_count = 0
-        
-        # Initialize M4 optimizations if available
-        self.m4_optimizer = get_m4_optimizer() if is_m4_available() else None
-        self.m4_memory_manager = get_m4_memory_manager() if is_m4_available() else None
-        
         self._authenticate_huggingface()
         self._configure_resource_limits()
         logger.info(f"WAN Video Generation Service initialized on device: {self.device}")
         logger.info(f"Resource limits: GPU memory fraction={self.resource_limits.gpu_memory_fraction}, Max RAM={self.resource_limits.max_system_ram_gb}GB")
-        if self.m4_optimizer:
-            logger.info("🍎 M4 optimizations enabled")
     
     def _configure_resource_limits(self):
         """Configure resource limits to prevent system crashes."""
@@ -158,11 +149,6 @@ class WanVideoGenerationService:
     
     def _get_memory_info(self) -> Dict[str, float]:
         """Get current memory usage information."""
-        # Use M4 unified memory manager if available
-        if self.m4_memory_manager:
-            return self.m4_memory_manager.get_memory_info()
-        
-        # Fallback to standard memory info
         memory_info = {
             "system_ram_used_gb": psutil.virtual_memory().used / (1024**3),
             "system_ram_percent": psutil.virtual_memory().percent,
@@ -253,23 +239,19 @@ class WanVideoGenerationService:
             self.pipeline.scheduler = scheduler
             self.pipeline.to(self.device)
             
-            # Apply M4-specific optimizations if available
-            if self.m4_optimizer:
-                self.m4_optimizer.configure_pipeline_for_m4(self.pipeline)
-            else:
-                # Fallback: Standard optimizations
-                try:
-                    # Try the newer xformers API first
-                    if hasattr(self.pipeline, 'enable_xformers_memory_efficient_attention'):
-                        self.pipeline.enable_xformers_memory_efficient_attention()
-                        logger.info("✅ xFormers memory efficient attention enabled")
-                    else:
-                        # Fallback: try enabling on individual components
-                        if hasattr(self.pipeline.transformer, 'enable_xformers_memory_efficient_attention'):
-                            self.pipeline.transformer.enable_xformers_memory_efficient_attention()
-                            logger.info("✅ xFormers enabled on transformer")
-                except Exception as e:
-                    logger.warning(f"Could not enable xFormers: {e}")
+            # Enable memory efficient attention if available
+            try:
+                # Try the newer xformers API first
+                if hasattr(self.pipeline, 'enable_xformers_memory_efficient_attention'):
+                    self.pipeline.enable_xformers_memory_efficient_attention()
+                    logger.info("✅ xFormers memory efficient attention enabled")
+                else:
+                    # Fallback: try enabling on individual components
+                    if hasattr(self.pipeline.transformer, 'enable_xformers_memory_efficient_attention'):
+                        self.pipeline.transformer.enable_xformers_memory_efficient_attention()
+                        logger.info("✅ xFormers enabled on transformer")
+            except Exception as e:
+                logger.warning(f"Could not enable xFormers: {e}")
             
             # Enable CPU offload only if GPU memory is limited
             if self.device == "cuda":
@@ -297,29 +279,23 @@ class WanVideoGenerationService:
         """Force aggressive memory cleanup."""
         if self.resource_limits.enable_aggressive_cleanup:
             logger.info("🧹 Performing aggressive memory cleanup")
+            gc.collect()
             
-            # Use M4 unified memory manager if available
-            if self.m4_memory_manager:
-                self.m4_memory_manager.cleanup_memory(aggressive=True)
-            else:
-                # Fallback to standard cleanup
+            if self.device == "cuda" and torch.cuda.is_available():
+                torch.cuda.empty_cache()
+                torch.cuda.synchronize()
+            elif self.device == "mps":
+                # For MPS, we rely on system-level memory management
+                # Force garbage collection is more important for unified memory
+                logger.info("🍎 MPS memory cleanup - relying on unified memory management")
+                import time
+                
+                # Give the system a moment to release memory
+                time.sleep(0.1)
+            
+            # Force Python garbage collection multiple times
+            for _ in range(3):
                 gc.collect()
-                
-                if self.device == "cuda" and torch.cuda.is_available():
-                    torch.cuda.empty_cache()
-                    torch.cuda.synchronize()
-                elif self.device == "mps":
-                    # For MPS, we rely on system-level memory management
-                    # Force garbage collection is more important for unified memory
-                    logger.info("🍎 MPS memory cleanup - relying on unified memory management")
-                    import time
-                    
-                    # Give the system a moment to release memory
-                    time.sleep(0.1)
-                
-                # Force Python garbage collection multiple times
-                for _ in range(3):
-                    gc.collect()
     
     async def generate_video(self, request: VideoGenerationRequest) -> Dict[str, Any]:
         """Generate video using WAN 2.1 models."""
@@ -381,22 +357,10 @@ class WanVideoGenerationService:
             
             logger.info(f"Generation parameters: {generation_params}")
             
-            # Generate video with M4 optimizations
+            # Generate video
             logger.info("🚀 Running inference...")
-            
-            # Optimize generation parameters for M4 if available
-            if self.m4_optimizer:
-                # Optimize any tensors in generation params
-                for key, value in generation_params.items():
-                    if isinstance(value, torch.Tensor):
-                        generation_params[key] = self.m4_optimizer.optimize_tensor_for_m4(value)
-            
             result = self.pipeline(**generation_params)
             video_frames = result.frames[0]
-            
-            # Optimize output frames for M4
-            if self.m4_optimizer and isinstance(video_frames, torch.Tensor):
-                video_frames = self.m4_optimizer.optimize_tensor_for_m4(video_frames)
             
             # Export video to file (using pre-validated path)
             export_to_video(video_frames, str(output_path), fps=request.fps)

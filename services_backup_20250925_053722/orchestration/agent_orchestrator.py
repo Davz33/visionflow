@@ -209,8 +209,8 @@ class VisionFlowAgent:
         self.llm = self._initialize_llm()
         self.tools = self._get_tools()
         self.agent_workflow = self._create_agent_workflow()
-        # self.cloud_tracker = get_cloud_tracker()
-        # self.metrics_logger = get_metrics_logger()
+        self.cloud_tracker = get_cloud_tracker()
+        self.metrics_logger = get_metrics_logger()
         
     def _initialize_llm(self) -> ChatVertexAI:
         """Initialize LLM with tools binding"""
