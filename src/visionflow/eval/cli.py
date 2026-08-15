@@ -191,7 +191,11 @@ def build_parser() -> argparse.ArgumentParser:
 def main(argv: Optional[List[str]] = None) -> int:
     parser = build_parser()
     args = parser.parse_args(argv)
-    return int(args.func(args))
+    try:
+        return int(args.func(args))
+    except (ValueError, FileNotFoundError) as exc:
+        sys.stderr.write(f"{exc}\n")
+        return 2
 
 
 if __name__ == "__main__":
