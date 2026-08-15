@@ -64,7 +64,7 @@ async def lifespan(app: FastAPI):
 # Create FastAPI application
 app = FastAPI(
     title="VisionFlow Video Evaluation & Generation API",
-    description="Production API for automated video quality assessment and WAN 2.1 video generation",
+    description="Production API for automated video quality assessment and Wan2.2 video generation",
     version="1.0.0",
     lifespan=lifespan
 )
@@ -225,7 +225,7 @@ async def get_analytics_summary():
 @app.post("/generate/video")
 async def generate_video(request: VideoGenerationRequest):
     """
-    Generate video using WAN 2.1 models
+    Generate video using Wan2.2 models (Wan2.1 keys still accepted).
     
     Args:
         request: Video generation request with prompt and parameters
@@ -272,11 +272,18 @@ async def generate_video(request: VideoGenerationRequest):
                 "guidance_scale": request.guidance_scale,
                 "num_inference_steps": request.num_inference_steps,
                 "generation_time": result.get("generation_time", 0),
-                "memory_usage": result.get("memory_usage", {})
+                "memory_usage": result.get("memory_usage", {}),
+                "task": result.get("task"),
+                "model_key": result.get("model_key"),
+                "model_revision": result.get("model_revision"),
+                "hf_revision": result.get("hf_revision"),
+                "upstream_git_sha": result.get("upstream_git_sha"),
+                "use_prompt_extend": result.get("use_prompt_extend"),
+                "sample_solver": result.get("sample_solver"),
             },
             quality_metrics=result.get("quality_metrics", {}),
             generation_time=result.get("generation_time", 0),
-            model_version=result.get("model_version", "wan2.1")
+            model_version=result.get("model_used", result.get("model_version", "wan2.2"))
         )
         
     except HTTPException:

@@ -5,7 +5,9 @@ VisionFlow is a production-ready platform for AI-powered video generation and au
 ## 🚀 Core Features
 
 ### Video Generation
-- **WAN 2.1 Integration**: State-of-the-art video generation using multimodal AI models
+- **Wan2.2 Integration**: Open-weight T2V / I2V / TI2V / S2V / Animate (plus Animate-2 distilled)
+- **Size axis**: TI2V-5B (consumer 720P@24fps) vs T2V/I2V A14B MoE (~80GB)
+- **Prompt-extend ablation**: official `--use_prompt_extend` on/off
 - **Multi-Quality Output**: Support for low, medium, high, and ultra quality settings
 - **Batch Processing**: Efficient handling of multiple video generation requests
 - **Progress Tracking**: Real-time monitoring of generation progress
@@ -42,7 +44,7 @@ VisionFlow is a production-ready platform for AI-powered video generation and au
 ```
 ┌─────────────────┐    ┌──────────────────┐    ┌─────────────────┐
 │   Frontend      │    │   Backend API    │    │   AI Services   │
-│   (Flutter)     │◄──►│   (FastAPI)      │◄──►│   (WAN 2.1)     │
+│   (Flutter)     │◄──►│   (FastAPI)      │◄──►│   (Wan2.2)      │
 │                 │    │                  │    │   (Gemini Pro)  │
 │ • Dashboard     │    │ • Request        │    │ • Video Gen     │
 │ • Monitoring    │    │   Validation     │    │ • Evaluation    │
@@ -73,7 +75,7 @@ VisionFlow is a production-ready platform for AI-powered video generation and au
 - **Kubernetes Deployment**: Complete K8s manifests and Helm charts
 
 #### **Video Generation Service**
-- **WAN 2.1 Integration**: Full integration with state-of-the-art video model
+- **Wan2.2 Integration**: Full integration with the official open-weight zoo (pinned 2026-08-15)
 - **Quality Settings**: Support for multiple quality levels (low, medium, high, ultra)
 - **Batch Processing**: Efficient handling of multiple generation requests
 - **Progress Tracking**: Real-time job status and progress monitoring
@@ -130,7 +132,7 @@ VisionFlow is a production-ready platform for AI-powered video generation and au
 ## 🛠️ Technology Stack
 
 - **Backend**: Python 3.10+, FastAPI, Celery
-- **AI Models**: WAN 2.1, Gemini Pro Vision, CLIP
+- **AI Models**: Wan2.2 (TI2V-5B, T2V-A14B, I2V-A14B, S2V-14B, Animate-14B / Animate-2), Gemini Pro Vision, CLIP
 - **Databases**: PostgreSQL, Redis
 - **Storage**: MinIO, Google Cloud Storage
 - **Orchestration**: Kubernetes, Docker
@@ -347,7 +349,10 @@ STORAGE_ACCESS_KEY=your_access_key
 STORAGE_SECRET_KEY=your_secret_key
 
 # Model Configuration
-WAN_MODEL_PATH=multimodalart/wan2-1-fast
+WAN_MODEL_PATH=Wan-AI/Wan2.2-TI2V-5B-Diffusers
+WAN_TASK=ti2v-5B
+WAN_USE_PROMPT_EXTEND=false
+WAN_SAMPLE_SOLVER=unipc
 MODEL_DEVICE=auto
 MAX_MEMORY_GB=8
 
@@ -387,7 +392,11 @@ curl -X POST "http://localhost:8000/generate/video" \
     "prompt": "A serene mountain landscape at sunset",
     "quality": "high",
     "duration": 10,
-    "resolution": "512x512"
+    "resolution": "1280x704",
+    "task": "ti2v-5B",
+    "use_prompt_extend": false,
+    "sample_solver": "unipc",
+    "num_inference_steps": 50
   }'
 ```
 
@@ -497,3 +506,22 @@ For technical support or questions:
 ---
 
 **VisionFlow** - Transforming video creation through intelligent AI orchestration and automated quality assessment.
+
+## Wan2.2 eval harness (open weights, 2026-08-15)
+
+Default generate path is **Wan2.2 TI2V-5B** (`Wan-AI/Wan2.2-TI2V-5B-Diffusers`), not Wan2.1.
+Upstream generate.py lives in [Wan-Video/Wan2.2](https://github.com/Wan-Video/Wan2.2) at git SHA `42bf4cfaa384bc21833865abc2f9e6c0e67233dc` (2026-03-17). Wan 2.5 / 2.6 / 3.0 are Alibaba Cloud API products without official public weights; this repo does not wrap them.
+
+```bash
+# Print pinned zoo (HF ids, tasks, sample_steps)
+python -m visionflow.eval.cli zoo
+
+# Expand the benchmark matrix (task x size x prompt-extend x scheduler)
+python -m visionflow.eval.cli matrix --suite config/wan_eval_suite.yaml
+
+# Dry-run a generate.py-shaped request (no GPU)
+python -m visionflow.eval.cli plan --task ti2v-5B --size 1280*704 --prompt "a cat" --base_seed 42
+```
+
+Eval axes in `config/wan_eval_suite.yaml`: TI2V / T2V / I2V / S2V / Animate / Animate-2, 5B vs A14B, prompt-extend on/off, 480P/720P (and TI2V 1280x704 @ 24fps), UniPC vs DPM++ vs few-step, plus official Animate-2 distilled 4-step weights. Result JSON records `model_revision`, `upstream_git_sha`, `hf_revision`, and `seed`.
+

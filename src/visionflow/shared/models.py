@@ -26,31 +26,60 @@ class JobStatus(str, Enum):
     CANCELLED = "cancelled"
 
 
+class WanTask(str, Enum):
+    """Official Wan2.2 generate.py --task values plus Animate-2."""
+
+    T2V_A14B = "t2v-A14B"
+    I2V_A14B = "i2v-A14B"
+    TI2V_5B = "ti2v-5B"
+    S2V_14B = "s2v-14B"
+    ANIMATE_14B = "animate-14B"
+    ANIMATE_2_14B = "animate-2-14B"
+
+
 class VideoGenerationRequest(BaseModel):
     """Request model for video generation."""
     
-    prompt: str = Field(..., min_length=1, max_length=500, description="Text prompt for video generation")
+    prompt: str = Field(..., min_length=1, max_length=4000, description="Text prompt for video generation")
     duration: int = Field(default=5, ge=1, le=30, description="Video duration in seconds")
     quality: VideoQuality = Field(default=VideoQuality.MEDIUM, description="Video quality setting")
     fps: int = Field(default=24, ge=12, le=60, description="Frames per second")
-    resolution: str = Field(default="512x512", description="Video resolution (WxH)")
+    resolution: str = Field(default="1280x704", description="Video resolution (WxH or W*H)")
     seed: Optional[int] = Field(default=None, description="Random seed for reproducibility")
     
     # Advanced parameters
-    guidance_scale: float = Field(default=7.5, ge=1.0, le=20.0, description="Guidance scale for generation")
-    num_inference_steps: int = Field(default=20, ge=10, le=100, description="Number of inference steps")
+    guidance_scale: float = Field(default=5.0, ge=1.0, le=20.0, description="Guidance scale for generation")
+    num_inference_steps: int = Field(default=50, ge=4, le=100, description="Number of inference steps")
+
+    # Wan2.2 generate.py-compatible fields (optional; old clients omit them)
+    task: Optional[WanTask] = Field(default=WanTask.TI2V_5B, description="Official Wan task")
+    model_key: Optional[str] = Field(default=None, description="Zoo key, e.g. ti2v-5B or t2v-A14B")
+    use_prompt_extend: bool = Field(default=False, description="Official --use_prompt_extend ablation")
+    prompt_extend_method: str = Field(default="local_qwen", description="dashscope or local_qwen")
+    sample_solver: str = Field(default="unipc", description="unipc or dpm++")
+    image_path: Optional[str] = Field(default=None, description="Input image for I2V / TI2V / S2V")
+    audio_path: Optional[str] = Field(default=None, description="Input audio for S2V")
+    pose_video_path: Optional[str] = Field(default=None, description="Pose video for Animate")
+    distilled: bool = Field(default=False, description="Use official distilled few-step weights when present")
     
     @validator("resolution")
     def validate_resolution(cls, v: str) -> str:
-        """Validate resolution format."""
+        """Accept 1280x704 or official 1280*704; store as WIDTHxHEIGHT."""
+        token = v.strip().lower().replace("*", "x")
         try:
-            width, height = v.split("x")
+            width, height = token.split("x")
             w, h = int(width), int(height)
             if w < 64 or h < 64 or w > 2048 or h > 2048:
                 raise ValueError("Resolution must be between 64x64 and 2048x2048")
-            return v
+            return f"{w}x{h}"
         except (ValueError, IndexError):
-            raise ValueError("Resolution must be in format 'WIDTHxHEIGHT'")
+            raise ValueError("Resolution must be in format 'WIDTHxHEIGHT' or 'WIDTH*HEIGHT'")
+
+    @validator("sample_solver")
+    def validate_sample_solver(cls, v: str) -> str:
+        if v not in {"unipc", "dpm++"}:
+            raise ValueError("sample_solver must be 'unipc' or 'dpm++'")
+        return v
 
 
 class IntentAnalysis(BaseModel):

@@ -27,7 +27,7 @@ settings = get_settings()
 # Create FastAPI app
 app = FastAPI(
     title="VisionFlow Generation Service",
-    description="GPU-accelerated video generation with WAN 2.1",
+    description="GPU-accelerated video generation with Wan2.2",
     version="0.1.0",
     docs_url="/docs",
     redoc_url="/redoc",
@@ -87,10 +87,10 @@ async def startup_event():
     # Optionally preload model
     try:
         # This will load the model into cache
-        logger.info("Preloading WAN 2.1 model...")
+        logger.info("Preloading Wan2.2 model...")
         await enhanced_generation_service.model_loader.load_pipeline(
             settings.model.wan_model_path,
-            "wan2-1-fast"
+            "ti2v-5B"
         )
         logger.info("Model preloaded successfully")
     except Exception as e:
@@ -137,7 +137,7 @@ async def health_check():
 
 @app.post("/generate", response_model=GenerationServiceResponse)
 async def generate_video(request: GenerationServiceRequest):
-    """Generate video using WAN 2.1 model."""
+    """Generate video using a Wan2.2 model."""
     
     try:
         logger.info(f"Starting video generation for job {request.job_id}")

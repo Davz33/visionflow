@@ -5,14 +5,14 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "visionflow"
 version = "0.1.0"
-description = "VisionFlow is a video generation and evaluation platform with WAN 2.1 and LangChain orchestration"
+description = "VisionFlow is a video generation and evaluation platform with Wan2.2 and LangChain orchestration"
 authors = [
     {name = "Davide Vitiello", email = "davide_vitiello@outlook.com"}
 ]
 license = {text = "MIT"}
 readme = "README.md"
 requires-python = ">=3.10"
-keywords = ["video-generation", "ai", "wan2.1", "microservices", "langchain", "kubernetes"]
+keywords = ["video-generation", "ai", "wan2.2", "microservices", "langchain", "kubernetes"]
 classifiers = [
     "Development Status :: 4 - Beta",
     "Intended Audience :: Developers",
@@ -55,7 +55,7 @@ dependencies = [
     "ffmpeg-python>=0.2.0",
     "numpy>=1.24.0",
     
-    # ML/AI - Enhanced for WAN 2.1 video generation
+    # ML/AI - Wan2.2 video generation (Diffusers WanPipeline / WanImageToVideoPipeline)
     "torch>=2.4.0",
     "torchvision>=0.17.0", 
     "transformers>=4.40.0",
@@ -66,6 +66,7 @@ dependencies = [
     "psutil>=5.9.0",
     "imageio[ffmpeg]>=2.33.0",
     "av>=10.0.0",
+    "pyyaml>=6.0",
     
     # LangChain and orchestration
     "langchain>=0.2.0",
@@ -83,6 +84,9 @@ dependencies = [
     # Text processing
     "ftfy>=6.1.0"
 ]
+
+[project.scripts]
+wan-eval = "visionflow.eval.cli:main"
 
 [project.urls]
 Homepage = "https://github.com/davz3/visionflow"

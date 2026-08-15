@@ -1,0 +1,129 @@
+# Wan2.2 open-weight eval suite
+# Pinned 2026-08-15 against github.com/Wan-Video/Wan2.2
+# (main SHA 42bf4cfaa384bc21833865abc2f9e6c0e67233dc, 2026-03-17)
+# and HuggingFace Wan-AI Wan2.2 collection (Animate-2 Diffusers 2026-08-06).
+#
+# This file lists jobs. It does not download weights or run a UI.
+
+suite_id: wan2.2-open-eval
+pinned_on: "2026-08-15"
+upstream_repo: https://github.com/Wan-Video/Wan2.2
+upstream_git_sha: 42bf4cfaa384bc21833865abc2f9e6c0e67233dc
+hf_org: Wan-AI
+hf_revision: main
+default_seed: 42
+default_duration_s: 5
+
+prompts:
+  default: >-
+    Two anthropomorphic cats in comfy boxing gear and bright gloves fight
+    intensely on a spotlighted stage.
+  t2v-A14B: >-
+    Two anthropomorphic cats in comfy boxing gear and bright gloves fight
+    intensely on a spotlighted stage.
+  i2v-A14B: >-
+    Summer beach vacation style, a white cat wearing sunglasses sits on a
+    surfboard.
+  ti2v-5B: >-
+    Two anthropomorphic cats in comfy boxing gear and bright gloves fight
+    intensely on a spotlighted stage.
+  s2v-14B: >-
+    Summer beach vacation style, a white cat wearing sunglasses sits on a
+    surfboard.
+  animate-14B: People in the video are doing actions.
+  animate-2-14B: People in the video are doing actions.
+
+# Size axis: 5B (consumer 720P@24fps) vs A14B/14B (80GB-class MoE / dense).
+tasks:
+  - task: ti2v-5B
+    model_key: ti2v-5B
+    prompt_extend_ablation: true
+    scheduler_ablation: true
+    presets:
+      - name: 720p-24fps-5s
+        size: 1280*704
+        fps: 24
+        duration_s: 5
+      - name: 720p-portrait-24fps-5s
+        size: 704*1280
+        fps: 24
+        duration_s: 5
+
+  - task: t2v-A14B
+    model_key: t2v-A14B
+    prompt_extend_ablation: true
+    scheduler_ablation: true
+    presets:
+      - name: 480p-16fps-5s
+        size: 832*480
+        fps: 16
+        duration_s: 5
+      - name: 720p-16fps-5s
+        size: 1280*720
+        fps: 16
+        duration_s: 5
+
+  - task: i2v-A14B
+    model_key: i2v-A14B
+    image: examples/i2v_input.JPG
+    prompt_extend_ablation: true
+    scheduler_ablation: false
+    presets:
+      - name: 480p
+        size: 832*480
+        fps: 16
+        duration_s: 5
+      - name: 720p
+        size: 1280*720
+        fps: 16
+        duration_s: 5
+
+  - task: s2v-14B
+    model_key: s2v-14B
+    image: examples/i2v_input.JPG
+    audio: examples/talk.wav
+    prompt_extend_ablation: false
+    scheduler_ablation: false
+    presets:
+      - name: s2v-1024x704
+        size: 1024*704
+        fps: 16
+        duration_s: 5
+      - name: s2v-720p
+        size: 1280*720
+        fps: 16
+        duration_s: 5
+
+  - task: animate-14B
+    model_key: animate-14B
+    pose_video: examples/wan_animate/animate/video.mp4
+    image: examples/wan_animate/animate/image.jpeg
+    prompt_extend_ablation: false
+    scheduler_ablation: false
+    presets:
+      - name: animate-720p
+        size: 1280*720
+        fps: 30
+        duration_s: 5
+
+  - task: animate-2-14B
+    model_key: animate-2-14B
+    pose_video: examples/wan_animate/animate/video.mp4
+    image: examples/wan_animate/animate/image.jpeg
+    prompt_extend_ablation: false
+    scheduler_ablation: true
+    presets:
+      - name: animate2-720p
+        size: 1280*720
+        fps: 30
+        duration_s: 5
+
+# Legacy Wan2.1 T2V kept as a regression baseline, not the default.
+legacy_baselines:
+  - task: t2v-1.3B
+    model_key: wan2.1-t2v-1.3b
+    presets:
+      - name: wan21-480p
+        size: 832*480
+        fps: 16
+        duration_s: 5

@@ -83,14 +83,22 @@ class ModelSettings(BaseSettings):
     """Model configuration."""
     
     # Local model settings
-    wan_model_path: str = Field(env="WAN_MODEL_PATH")
+    wan_model_path: str = Field(default="Wan-AI/Wan2.2-TI2V-5B-Diffusers", env="WAN_MODEL_PATH")
     cache_dir: str = Field(default="/app/cache", env="MODEL_CACHE_DIR")
     device: str = Field(default="auto", env="MODEL_DEVICE")
     max_memory_gb: int = Field(default=8, env="MAX_MEMORY_GB")
     enable_cpu_offload: bool = Field(default=True, env="ENABLE_CPU_OFFLOAD")
     max_duration: int = Field(default=30, env="MAX_DURATION")
     default_fps: int = Field(default=24, env="DEFAULT_FPS")
-    default_resolution: str = Field(default="512x512", env="DEFAULT_RESOLUTION")
+    default_resolution: str = Field(default="1280x704", env="DEFAULT_RESOLUTION")
+    default_task: str = Field(default="ti2v-5B", env="WAN_TASK")
+    use_prompt_extend: bool = Field(default=False, env="WAN_USE_PROMPT_EXTEND")
+    sample_solver: str = Field(default="unipc", env="WAN_SAMPLE_SOLVER")
+    wan_upstream_git_sha: str = Field(
+        default="42bf4cfaa384bc21833865abc2f9e6c0e67233dc",
+        env="WAN_UPSTREAM_GIT_SHA",
+    )
+    wan_hf_revision: str = Field(default="main", env="WAN_HF_REVISION")
     
     # Remote WAN settings
     use_remote_wan: bool = Field(default=False, env="USE_REMOTE_WAN")

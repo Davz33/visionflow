@@ -1,6 +1,6 @@
-"""
-Enhanced WAN 2.1 video generation service with real model implementation
-Optimized for GPU usage and memory management
+"""Enhanced Wan video generation service with real model implementation.
+
+Optimized for GPU usage and memory management.
 """
 
 import asyncio
@@ -103,7 +103,7 @@ class GPUMemoryManager:
 
 
 class WANModelLoader:
-    """Handles WAN 2.1 model loading and caching"""
+    """Handles Wan model loading and caching"""
     
     def __init__(self, memory_manager: GPUMemoryManager):
         self.memory_manager = memory_manager
@@ -116,8 +116,8 @@ class WANModelLoader:
         self._last_access = {}
         self.max_cached_models = 2  # Limit due to GPU memory
         
-    async def load_pipeline(self, model_path: str, model_type: str = "wan2-1-fast") -> DiffusionPipeline:
-        """Load and cache the WAN 2.1 pipeline"""
+    async def load_pipeline(self, model_path: str, model_type: str = "ti2v-5B") -> DiffusionPipeline:
+        """Load and cache a Wan Diffusers pipeline."""
         cache_key = f"{model_path}_{model_type}"
         
         # Return cached pipeline if available
@@ -130,7 +130,7 @@ class WANModelLoader:
         if not self.memory_manager.is_memory_available(4.0):  # Need ~4GB for WAN model
             await self._cleanup_old_models()
             
-        logger.info(f"Loading WAN 2.1 model: {model_path}")
+        logger.info(f"Loading Wan model: {model_path}")
         start_time = time.time()
         
         try:
@@ -284,7 +284,7 @@ class VideoProcessor:
                 )
                 
                 # Clean up temp file
-                os.remove(temp_path)
+                Path(temp_path).unlink()
                 
             except ImportError:
                 logger.warning("ffmpeg-python not available, using OpenCV encoding")
@@ -337,7 +337,7 @@ class VideoProcessor:
 
 
 class EnhancedVideoGenerationService:
-    """Enhanced video generation service with real WAN 2.1 implementation"""
+    """Enhanced video generation service with real Wan2.2 implementation"""
     
     def __init__(self):
         self.settings = get_settings()
@@ -375,14 +375,14 @@ class EnhancedVideoGenerationService:
         key_string = str(sorted(key_data.items()))
         return hashlib.md5(key_string.encode()).hexdigest()
     
-    @track_video_generation("wan2.1")
+    @track_video_generation("wan2.2")
     async def generate_video(
         self,
         request: VideoGenerationRequest,
         prompt_optimization: PromptOptimization,
         routing_decision: RoutingDecision,
     ) -> GenerationResult:
-        """Generate video using real WAN 2.1 model"""
+        """Generate video using a Wan2.2 (or legacy Wan2.1) model"""
         
         # Check cache first
         cache_key = self._generate_cache_key(
@@ -392,7 +392,7 @@ class EnhancedVideoGenerationService:
         
         if cache_key in self._generation_cache:
             cached_path = self._generation_cache[cache_key]
-            if os.path.exists(cached_path):
+            if Path(cached_path).exists():
                 logger.info("Serving cached video", cache_key=cache_key)
                 return self._create_cached_result(cached_path, cache_key)
         
@@ -409,7 +409,7 @@ class EnhancedVideoGenerationService:
             # Load model pipeline
             pipeline = await self.model_loader.load_pipeline(
                 self.settings.model.wan_model_path,
-                "wan2-1-fast"
+                "ti2v-5B"
             )
             
             # Prepare generation parameters
@@ -459,7 +459,7 @@ class EnhancedVideoGenerationService:
             
             return GenerationResult(
                 video_path=video_path,
-                model_used="wan2-1-fast",
+                model_used="ti2v-5B",
                 generation_time=generation_time,
                 parameters={
                     "device": self.memory_manager.device,
@@ -588,18 +588,19 @@ class EnhancedVideoGenerationService:
         generation_time: float,
     ) -> Dict[str, float]:
         """Calculate comprehensive quality metrics"""
+        path = Path(video_path)
         metrics = {
             "generation_time": generation_time,
-            "file_exists": float(os.path.exists(video_path)),
+            "file_exists": float(path.exists()),
             "expected_duration": float(request.duration),
         }
         
-        if not os.path.exists(video_path):
+        if not path.exists():
             return metrics
         
         try:
             # Basic file metrics
-            file_size = os.path.getsize(video_path)
+            file_size = path.stat().st_size
             metrics["file_size_mb"] = file_size / (1024 * 1024)
             
             # Video analysis using OpenCV
@@ -676,11 +677,12 @@ class EnhancedVideoGenerationService:
     
     def _create_cached_result(self, video_path: str, cache_key: str) -> GenerationResult:
         """Create result object for cached video"""
-        file_size = os.path.getsize(video_path) if os.path.exists(video_path) else 0
+        path = Path(video_path)
+        file_size = path.stat().st_size if path.exists() else 0
         
         return GenerationResult(
             video_path=video_path,
-            model_used="wan2-1-fast-cached",
+            model_used="ti2v-5B-cached",
             generation_time=0.1,
             parameters={"cached": True, "cache_key": cache_key},
             estimated_cost=0.01,  # Minimal cost for cached result

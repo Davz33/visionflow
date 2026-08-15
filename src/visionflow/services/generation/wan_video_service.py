@@ -1,14 +1,17 @@
-"""Real WAN 2.1 Video Generation Service using HuggingFace Diffusers."""
+"""Wan2.2 video generation via HuggingFace Diffusers (Wan2.1 kept as legacy)."""
 
 import gc
 import os
 import time
-import torch
-import psutil
+import json
+import uuid
+import shutil
 from pathlib import Path
-from typing import Dict, Any, Optional
+from typing import Dict, Any, Optional, Tuple
 from dataclasses import dataclass
 
+import torch
+import psutil
 from huggingface_hub import login
 from diffusers import WanPipeline, AutoencoderKLWan
 from diffusers.schedulers.scheduling_unipc_multistep import UniPCMultistepScheduler
@@ -20,38 +23,54 @@ from .resource_config import get_resource_limits, ResourceLimits
 from .video_metadata_tracker import metadata_tracker
 from .m4_optimizations import get_m4_optimizer, is_m4_available
 from .m4_memory_manager import get_m4_memory_manager
+from .wan_generate_spec import WanGenerateRequest, result_identity, validate_generate_request
+from .wan_model_zoo import (
+    WAN_MODELS as WAN_ZOO,
+    current_zoo_metadata,
+    get_model,
+    select_model_for_quality,
+)
 
 logger = get_logger(__name__)
 
 @dataclass
 class WanModelConfig:
-    """Configuration for WAN model variants."""
+    """Runtime view of a zoo entry for the existing load/generate path."""
     model_id: str
     flow_shift: float
     recommended_vram_gb: int
     max_resolution: tuple
     description: str
+    key: str = ""
+    task: str = ""
+    sample_fps: int = 24
+    sample_steps: int = 50
+    hf_revision: str = "main"
+    upstream_git_sha: str = ""
 
-# Available WAN 2.1 models
-WAN_MODELS = {
-    "wan2.1-t2v-1.3b": WanModelConfig(
-        model_id="Wan-AI/Wan2.1-T2V-1.3B-Diffusers",
-        flow_shift=3.0,
-        recommended_vram_gb=8,
-        max_resolution=(832, 480),
-        description="Lightweight model for 480P generation"
-    ),
-    "wan2.1-t2v-14b": WanModelConfig(
-        model_id="Wan-AI/Wan2.1-T2V-14B-Diffusers", 
-        flow_shift=5.0,
-        recommended_vram_gb=15,
-        max_resolution=(1280, 720),
-        description="High-quality model for 720P generation"
+
+def _spec_to_config(key: str) -> WanModelConfig:
+    spec = get_model(key)
+    return WanModelConfig(
+        model_id=spec.hf_id,
+        flow_shift=spec.flow_shift,
+        recommended_vram_gb=spec.recommended_vram_gb,
+        max_resolution=spec.max_resolution,
+        description=spec.description,
+        key=spec.key,
+        task=spec.task,
+        sample_fps=spec.sample_fps,
+        sample_steps=spec.sample_steps,
+        hf_revision=spec.hf_revision,
+        upstream_git_sha=spec.upstream_git_sha,
     )
-}
+
+
+# Back-compat name: old imports still see WAN_MODELS keys.
+WAN_MODELS = {key: _spec_to_config(key) for key in WAN_ZOO}
 
 class WanVideoGenerationService:
-    """Real WAN 2.1 Video Generation Service."""
+    """Wan2.2 Diffusers generate path (Wan2.1 keys still load)."""
     
     def __init__(self, resource_limits: Optional[ResourceLimits] = None):
         self.resource_limits = resource_limits or get_resource_limits()
@@ -67,7 +86,7 @@ class WanVideoGenerationService:
         
         self._authenticate_huggingface()
         self._configure_resource_limits()
-        logger.info(f"WAN Video Generation Service initialized on device: {self.device}")
+        logger.info(f"Wan video service initialized on device: {self.device}")
         logger.info(f"Resource limits: GPU memory fraction={self.resource_limits.gpu_memory_fraction}, Max RAM={self.resource_limits.max_system_ram_gb}GB")
         if self.m4_optimizer:
             logger.info("🍎 M4 optimizations enabled")
@@ -184,16 +203,30 @@ class WanVideoGenerationService:
         
         return memory_info
     
-    def _select_model(self, quality: VideoQuality, resolution: str) -> str:
-        """Select the appropriate WAN model based on quality and resolution."""
-        width, height = map(int, resolution.split('x'))
-        total_pixels = width * height
-        
-        # Model selection logic
-        if quality in [VideoQuality.LOW, VideoQuality.MEDIUM] or total_pixels <= 832 * 480:
-            return "wan2.1-t2v-1.3b"
-        else:
-            return "wan2.1-t2v-14b"
+    def _select_model(
+        self,
+        quality: VideoQuality,
+        resolution: str,
+        request: Optional[VideoGenerationRequest] = None,
+    ) -> str:
+        """Prefer an explicit zoo key / supported task; else map quality."""
+        from .wan_model_zoo import SUPPORTED_SIZES, normalize_size
+
+        if request is not None:
+            if request.model_key:
+                return get_model(request.model_key).key
+            if request.distilled and request.task and request.task.value == "animate-2-14B":
+                return "animate-2-14B-distilled"
+            if request.task:
+                key = get_model(request.task.value).key
+                try:
+                    size_key = normalize_size(resolution)
+                    allowed = SUPPORTED_SIZES.get(request.task.value, ())
+                    if size_key in allowed:
+                        return key
+                except ValueError:
+                    pass
+        return select_model_for_quality(quality.value, resolution)
     
     async def _load_model(self, model_key: str):
         """Load WAN model if not already loaded."""
@@ -218,19 +251,21 @@ class WanVideoGenerationService:
         logger.info(f"Loading WAN model: {self.model_config.model_id}")
         
         try:
-            # Get cache directory from environment or use default
-            cache_dir = os.getenv('HF_HOME', os.getenv('TRANSFORMERS_CACHE'))
-            if cache_dir is None:
-                cache_dir = os.path.expanduser("~/.cache/huggingface")
-                os.makedirs(cache_dir, exist_ok=True)
-            logger.info(f"🔥 Using cache directory: {cache_dir}")
+            cache_dir_env = os.getenv('HF_HOME') or os.getenv('TRANSFORMERS_CACHE')
+            if cache_dir_env is None:
+                cache_dir = Path.home() / ".cache" / "huggingface"
+                cache_dir.mkdir(parents=True, exist_ok=True)
+            else:
+                cache_dir = Path(cache_dir_env)
+                cache_dir.mkdir(parents=True, exist_ok=True)
+            logger.info(f"Using cache directory: {cache_dir}")
             
             # Load VAE with explicit cache directory
             vae = AutoencoderKLWan.from_pretrained(
                 self.model_config.model_id, 
                 subfolder="vae", 
                 torch_dtype=torch.float32,
-                cache_dir=cache_dir,
+                cache_dir=str(cache_dir),
                 local_files_only=False  # Allow cache fallback
             )
             
@@ -247,7 +282,7 @@ class WanVideoGenerationService:
                 self.model_config.model_id,
                 vae=vae,
                 torch_dtype=torch.bfloat16 if self.device != "cpu" else torch.float32,
-                cache_dir=cache_dir,
+                cache_dir=str(cache_dir),
                 local_files_only=False  # Allow cache fallback
             )
             self.pipeline.scheduler = scheduler
@@ -322,7 +357,7 @@ class WanVideoGenerationService:
                     gc.collect()
     
     async def generate_video(self, request: VideoGenerationRequest) -> Dict[str, Any]:
-        """Generate video using WAN 2.1 models."""
+        """Generate video using the pinned Wan zoo (Wan2.2 by default)."""
         logger.info(f"🎬 Starting video generation: '{request.prompt[:50]}...'")
         start_time = time.time()
         
@@ -355,7 +390,7 @@ class WanVideoGenerationService:
             logger.info(f"✅ Pre-generation validation passed - ready to save to: {output_path}")
             
             # Select and load appropriate model
-            model_key = self._select_model(request.quality, request.resolution)
+            model_key = self._select_model(request.quality, request.resolution, request)
             await self._load_model(model_key)
             
             # Parse resolution
@@ -378,6 +413,9 @@ class WanVideoGenerationService:
             if request.seed is not None:
                 generator = torch.Generator(device=self.device).manual_seed(request.seed)
                 generation_params["generator"] = generator
+
+            if getattr(request, "image_path", None):
+                generation_params["image"] = request.image_path
             
             logger.info(f"Generation parameters: {generation_params}")
             
@@ -405,25 +443,69 @@ class WanVideoGenerationService:
             final_memory = self._get_memory_info()
             generation_time = time.time() - start_time
             
+            seed = request.seed if request.seed is not None else -1
+            gen_req = WanGenerateRequest(
+                task=(request.task.value if request.task else self.model_config.task) or "ti2v-5B",
+                size=request.resolution.replace("x", "*"),
+                prompt=request.prompt,
+                image=request.image_path,
+                audio=request.audio_path,
+                pose_video=request.pose_video_path,
+                use_prompt_extend=bool(request.use_prompt_extend),
+                prompt_extend_method=request.prompt_extend_method,
+                sample_solver=request.sample_solver,
+                sample_steps=request.num_inference_steps,
+                sample_guide_scale=request.guidance_scale,
+                base_seed=seed,
+                distilled=bool(request.distilled),
+                model_key=model_key,
+            )
+            try:
+                gen_req = validate_generate_request(gen_req)
+            except ValueError as exc:
+                logger.warning(f"Generate spec warning (continuing with Diffusers path): {exc}")
+            identity = result_identity(gen_req, seed if seed >= 0 else 0)
+            identity.update(current_zoo_metadata())
+
             # Create generation result for metadata tracking
             generation_result = {
                 "status": "completed",
                 "video_path": str(output_path),
                 "model_used": self.model_config.model_id,
+                "model_revision": identity.get("model_revision"),
+                "hf_revision": identity.get("hf_revision"),
+                "upstream_git_sha": identity.get("upstream_git_sha"),
+                "upstream_repo": identity.get("upstream_repo"),
+                "seed": request.seed,
+                "task": identity.get("task"),
+                "model_key": model_key,
+                "use_prompt_extend": bool(request.use_prompt_extend),
+                "sample_solver": request.sample_solver,
+                "sample_steps": request.num_inference_steps,
+                "size_class": identity.get("size_class"),
+                "distilled": bool(request.distilled),
                 "resolution": f"{width}x{height}",
                 "duration": request.duration,
                 "fps": request.fps,
                 "num_frames": num_frames,
                 "memory_usage": final_memory,
-                "generation_count": self.generation_count
+                "generation_count": self.generation_count,
+                "generation_time": generation_time,
             }
+            sidecar = output_path.with_suffix(".metadata.json")
+            sidecar.write_text(
+                json.dumps(generation_result, indent=2, default=str) + "\n",
+                encoding="utf-8",
+            )
+            generation_result["metadata_path"] = str(sidecar)
             
             # Track metadata for this generation
             try:
                 model_info = {
                     "model_name": self.model_config.model_id,
-                    "model_version": None,  # Could be extracted from model config
-                    "device": self.device
+                    "model_version": self.model_config.hf_revision,
+                    "device": self.device,
+                    "upstream_git_sha": self.model_config.upstream_git_sha,
                 }
                 
                 generation_id = await metadata_tracker.track_video_generation(
@@ -527,6 +609,7 @@ class WanVideoGenerationService:
             "device": self.device,
             "memory_usage": self._get_memory_info(),
             "available_models": list(WAN_MODELS.keys()),
+            "zoo": current_zoo_metadata(),
             "resource_limits": {
                 "gpu_memory_fraction": self.resource_limits.gpu_memory_fraction,
                 "max_system_ram_gb": self.resource_limits.max_system_ram_gb,

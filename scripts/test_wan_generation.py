@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Test WAN 2.1 video generation on RunPod"""
+"""Test Wan2.2 video generation on RunPod"""
 
 import asyncio
 import os
@@ -10,7 +10,7 @@ from visionflow.services.generation.wan_video_service import WanVideoGenerationS
 from visionflow.shared.models import VideoGenerationRequest
 
 async def test_generation():
-    print("🚀 Testing WAN 2.1 video generation...")
+    print("Testing Wan2.2 video generation...")
     
     # Ensure we're in the correct working directory
     current_dir = Path.cwd()
@@ -27,13 +27,14 @@ async def test_generation():
     # Create test request
     request = VideoGenerationRequest(
         prompt="A cat playing with a ball of yarn, high quality",
-        model_id="Wan-AI/Wan2.1-T2V-1.3B-Diffusers",  # Smaller model for faster test
-        duration=1.0,  # 1 second video
-        resolution="512x512",
-        fps=12,
+        model_key="ti2v-5B",
+        duration=1,
+        resolution="1280x704",
+        fps=24,
         quality="medium",
-        guidance_scale=7.5,
-        num_inference_steps=10  # Fewer steps for faster test
+        guidance_scale=5.0,
+        num_inference_steps=10,
+        seed=42,
     )
     
     print(f"📝 Prompt: {request.prompt}")

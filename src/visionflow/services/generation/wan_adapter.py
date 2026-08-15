@@ -1,6 +1,6 @@
 """
 WAN Service Adapter
-Switches between local and remote WAN2.1 services based on configuration
+Switches between local and remote Wan2.2 services based on configuration
 """
 
 from typing import Dict, Any
@@ -24,7 +24,7 @@ class WANServiceAdapter:
         self._local_service = None
         self._remote_service = None
         
-        logger.info(f"WAN adapter initialized - Remote mode: {self.settings.model.use_remote_wan}")
+        logger.info("WAN adapter initialized - Remote mode: %s", self.settings.model.use_remote_wan)
     
     async def generate_video(
         self,
@@ -47,7 +47,7 @@ class WANServiceAdapter:
     ) -> GenerationResult:
         """Generate video using remote WAN service"""
         
-        logger.info("🌐 Using remote WAN2.1 service")
+        logger.info("Using remote Wan2.2 service")
         
         if self._remote_service is None:
             from .remote_wan_client import remote_wan_client
@@ -71,7 +71,7 @@ class WANServiceAdapter:
     ) -> GenerationResult:
         """Generate video using local WAN service"""
         
-        logger.info("🏠 Using local WAN2.1 service")
+        logger.info("Using local Wan2.2 service")
         
         if self._local_service is None:
             from .wan_model_service import enhanced_generation_service
