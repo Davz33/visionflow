@@ -150,9 +150,11 @@ def _short_generate() -> dict:
     def _ram_monitor():
         try:
             import psutil
+            import gc
             while not stop_monitor:
                 vm = psutil.virtual_memory()
                 if vm.percent > 88.0:
+                    gc.collect()
                     msg = (
                         f"\n⚠️  CRITICAL SYSTEM RAM WARNING: {vm.percent:.1f}% used "
                         f"({vm.used / (1024**3):.2f}GB / {vm.total / (1024**3):.2f}GB). "
@@ -160,7 +162,7 @@ def _short_generate() -> dict:
                     )
                     sys.stdout.write(msg)
                     sys.stdout.flush()
-                time.sleep(2.0)
+                time.sleep(1.0)
         except Exception:
             pass
 

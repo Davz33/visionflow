@@ -305,6 +305,11 @@ class WanVideoGenerationService:
                 except Exception as exc:
                     logger.info(f"Sub-component 8-bit load not applicable ({exc}); continuing with float16 transformer")
 
+            # Force garbage collection before pipeline assembly
+            gc.collect()
+            if self.device == "cuda":
+                torch.cuda.empty_cache()
+
             pipeline_kwargs = {
                 "vae": vae,
                 "torch_dtype": weight_dtype,
@@ -322,6 +327,7 @@ class WanVideoGenerationService:
                 )
             except (ValueError, TypeError) as exc:
                 logger.warning(f"Initial pipeline load with kwargs failed ({exc}), retrying standard float16 load")
+                gc.collect()
                 self.pipeline = WanPipeline.from_pretrained(
                     self.model_config.model_id,
                     vae=vae,
