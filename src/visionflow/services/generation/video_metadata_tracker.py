@@ -98,6 +98,7 @@ class SQLiteMetadataStorage(VideoMetadataStorage):
     
     def __init__(self, db_path: str = "video_metadata.db"):
         self.db_path = Path(db_path)
+        self.db_path.parent.mkdir(parents=True, exist_ok=True)
         self._init_database()
     
     def _init_database(self):
