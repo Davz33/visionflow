@@ -24,6 +24,7 @@ GENERATE_PIP = (
     "structlog>=23.2.0",
     "prometheus-client>=0.19.0",
     "pydantic-settings>=2.0.0",
+    "bitsandbytes>=0.43.0",
 )
 
 
@@ -107,6 +108,7 @@ def _ensure_generate_deps() -> None:
         ("structlog", GENERATE_PIP[0]),
         ("prometheus_client", GENERATE_PIP[1]),
         ("pydantic_settings", GENERATE_PIP[2]),
+        ("bitsandbytes", GENERATE_PIP[3]),
     )
     missing = []
     for module_name, spec in probes:
@@ -118,7 +120,7 @@ def _ensure_generate_deps() -> None:
         return
     print("installing generate deps", missing)
     completed = subprocess.run(
-        [sys.executable, "-m", "pip", "install", "-q", *missing],
+        [sys.executable, "-m", "pip", "install", "-U", "-q", *missing],
         check=False,
         capture_output=True,
         text=True,
