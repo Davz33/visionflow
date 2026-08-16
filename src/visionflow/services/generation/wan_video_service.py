@@ -297,26 +297,38 @@ class WanVideoGenerationService:
             )
             self.pipeline.scheduler = scheduler
 
-            # Offload strategy for VRAM-constrained GPUs (e.g. 15GB T4)
+            # Offload and memory placement strategy adapted to available VRAM
             if self.device == "cuda":
                 total_gpu_memory = torch.cuda.get_device_properties(0).total_memory / (1024**3)
-                if total_gpu_memory < 20.0:
+                free_gpu_memory = torch.cuda.mem_get_info()[0] / (1024**3) if torch.cuda.is_available() else total_gpu_memory
+                logger.info(f"📊 CUDA Memory: total={total_gpu_memory:.1f}GB, free={free_gpu_memory:.1f}GB")
+                
+                # Adaptive tiers based on available free VRAM and total VRAM
+                if free_gpu_memory < 16.0 or total_gpu_memory < 20.0:
                     try:
-                        # Sequential CPU offload moves submodules one by one to GPU during forward pass
-                        if hasattr(self.pipeline, "enable_sequential_cpu_offload"):
-                            self.pipeline.enable_sequential_cpu_offload()
-                            logger.info("✅ Sequential CPU offload enabled (low VRAM strategy)")
-                        elif hasattr(self.pipeline, "enable_model_cpu_offload"):
-                            self.pipeline.enable_model_cpu_offload()
-                            logger.info("✅ Model CPU offload enabled")
+                        if free_gpu_memory < 8.0:
+                            # Severe constraint: sequential CPU offload (submodule by submodule during forward pass)
+                            if hasattr(self.pipeline, "enable_sequential_cpu_offload"):
+                                self.pipeline.enable_sequential_cpu_offload()
+                                logger.info("⚡ Adaptive VRAM strategy: Sequential CPU offload enabled (<8GB free VRAM)")
+                            elif hasattr(self.pipeline, "enable_model_cpu_offload"):
+                                self.pipeline.enable_model_cpu_offload()
+                                logger.info("⚡ Adaptive VRAM strategy: Model CPU offload fallback enabled")
+                            else:
+                                self.pipeline.to(self.device)
                         else:
-                            self.pipeline.to(self.device)
+                            # Moderate constraint: whole-model CPU offload (offloads entire components when idle)
+                            if hasattr(self.pipeline, "enable_model_cpu_offload"):
+                                self.pipeline.enable_model_cpu_offload()
+                                logger.info("⚡ Adaptive VRAM strategy: Model CPU offload enabled (<16GB free VRAM)")
+                            else:
+                                self.pipeline.to(self.device)
                     except Exception as e:
                         logger.warning(f"Could not enable CPU offload: {e}")
                         self.pipeline.to(self.device)
                 else:
                     self.pipeline.to(self.device)
-                    logger.info(f"🚀 Keeping model on GPU ({total_gpu_memory:.1f}GB VRAM available)")
+                    logger.info(f"🚀 High VRAM detected ({free_gpu_memory:.1f}GB free): Keeping full model on GPU")
             else:
                 self.pipeline.to(self.device)
             
