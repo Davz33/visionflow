@@ -287,27 +287,33 @@ class WanVideoGenerationService:
                 flow_shift=self.model_config.flow_shift
             )
             
-            # Load pipeline using low_cpu_mem_usage=True to avoid loading all shards into RAM before moving to GPU
+            # Load pipeline using low_cpu_mem_usage=True and optional 8-bit quantization / device offload hooks
+            quantization_config = None
+            if self.device == "cuda":
+                try:
+                    from diffusers import BitsAndBytesConfig
+                    quantization_config = BitsAndBytesConfig(load_in_8bit=True)
+                    logger.info("⚡ 8-bit BitsAndBytes quantization config enabled for VRAM optimization")
+                except ImportError:
+                    logger.info("bitsandbytes not installed; continuing with float16 weights")
+
+            pipeline_kwargs = {
+                "vae": vae,
+                "torch_dtype": weight_dtype,
+                "cache_dir": str(cache_dir),
+                "low_cpu_mem_usage": True,
+                "local_files_only": False,
+            }
+            if quantization_config is not None:
+                pipeline_kwargs["quantization_config"] = quantization_config
+
             try:
-                if self.device == "cuda" and torch.cuda.get_device_properties(0).total_memory / (1024**3) < 20.0:
-                    self.pipeline = WanPipeline.from_pretrained(
-                        self.model_config.model_id,
-                        vae=vae,
-                        torch_dtype=weight_dtype,
-                        cache_dir=str(cache_dir),
-                        low_cpu_mem_usage=True,
-                        local_files_only=False
-                    )
-                else:
-                    self.pipeline = WanPipeline.from_pretrained(
-                        self.model_config.model_id,
-                        vae=vae,
-                        torch_dtype=weight_dtype,
-                        cache_dir=str(cache_dir),
-                        local_files_only=False
-                    )
-            except (ValueError, TypeError):
-                # Fallback if low_cpu_mem_usage is not accepted
+                self.pipeline = WanPipeline.from_pretrained(
+                    self.model_config.model_id,
+                    **pipeline_kwargs
+                )
+            except (ValueError, TypeError) as exc:
+                logger.warning(f"Initial pipeline load with kwargs failed ({exc}), retrying standard float16 load")
                 self.pipeline = WanPipeline.from_pretrained(
                     self.model_config.model_id,
                     vae=vae,
@@ -323,6 +329,14 @@ class WanVideoGenerationService:
                 free_gpu_memory = torch.cuda.mem_get_info()[0] / (1024**3) if torch.cuda.is_available() else total_gpu_memory
                 logger.info(f"📊 CUDA Memory: total={total_gpu_memory:.1f}GB, free={free_gpu_memory:.1f}GB")
                 
+                # Enable VAE tiling & slicing to keep VRAM low during decode
+                if hasattr(self.pipeline, "enable_vae_slicing"):
+                    self.pipeline.enable_vae_slicing()
+                    logger.info("⚡ VAE slicing enabled")
+                if hasattr(self.pipeline, "enable_vae_tiling"):
+                    self.pipeline.enable_vae_tiling()
+                    logger.info("⚡ VAE tiling enabled")
+
                 # Adaptive tiers based on available free VRAM and total VRAM
                 if free_gpu_memory < 16.0 or total_gpu_memory < 20.0:
                     try:
