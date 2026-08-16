@@ -287,15 +287,23 @@ class WanVideoGenerationService:
                 flow_shift=self.model_config.flow_shift
             )
             
-            # Load pipeline using low_cpu_mem_usage=True and optional 8-bit quantization / device offload hooks
-            quantization_config = None
+            # Quantization configuration: Diffusers WanTransformer3DModel uses BitsAndBytesConfig on transformer component
+            transformer = None
             if self.device == "cuda":
                 try:
-                    from diffusers import BitsAndBytesConfig
-                    quantization_config = BitsAndBytesConfig(load_in_8bit=True)
-                    logger.info("⚡ 8-bit BitsAndBytes quantization config enabled for VRAM optimization")
-                except ImportError:
-                    logger.info("bitsandbytes not installed; continuing with float16 weights")
+                    from diffusers import BitsAndBytesConfig, WanTransformer3DModel
+                    quant_config = BitsAndBytesConfig(load_in_8bit=True)
+                    transformer = WanTransformer3DModel.from_pretrained(
+                        self.model_config.model_id,
+                        subfolder="transformer",
+                        quantization_config=quant_config,
+                        torch_dtype=weight_dtype,
+                        cache_dir=str(cache_dir),
+                        local_files_only=False,
+                    )
+                    logger.info("⚡ 8-bit quantized WanTransformer3DModel loaded successfully")
+                except Exception as exc:
+                    logger.info(f"Sub-component 8-bit load not applicable ({exc}); continuing with float16 transformer")
 
             pipeline_kwargs = {
                 "vae": vae,
@@ -304,8 +312,8 @@ class WanVideoGenerationService:
                 "low_cpu_mem_usage": True,
                 "local_files_only": False,
             }
-            if quantization_config is not None:
-                pipeline_kwargs["quantization_config"] = quantization_config
+            if transformer is not None:
+                pipeline_kwargs["transformer"] = transformer
 
             try:
                 self.pipeline = WanPipeline.from_pretrained(
