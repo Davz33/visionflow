@@ -287,7 +287,7 @@ class WanVideoGenerationService:
                 flow_shift=self.model_config.flow_shift
             )
             
-            # Load pipeline with explicit cache directory and device_map="balanced" if supported
+            # Load pipeline using low_cpu_mem_usage=True to avoid loading all shards into RAM before moving to GPU
             try:
                 if self.device == "cuda" and torch.cuda.get_device_properties(0).total_memory / (1024**3) < 20.0:
                     self.pipeline = WanPipeline.from_pretrained(
@@ -295,7 +295,7 @@ class WanVideoGenerationService:
                         vae=vae,
                         torch_dtype=weight_dtype,
                         cache_dir=str(cache_dir),
-                        device_map="balanced",
+                        low_cpu_mem_usage=True,
                         local_files_only=False
                     )
                 else:
@@ -307,7 +307,7 @@ class WanVideoGenerationService:
                         local_files_only=False
                     )
             except (ValueError, TypeError):
-                # Fallback if device_map strategy is rejected by specific pipeline class
+                # Fallback if low_cpu_mem_usage is not accepted
                 self.pipeline = WanPipeline.from_pretrained(
                     self.model_config.model_id,
                     vae=vae,
