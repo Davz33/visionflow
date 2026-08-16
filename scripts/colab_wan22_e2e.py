@@ -132,6 +132,8 @@ def _ensure_generate_deps() -> None:
 
 def _short_generate() -> dict:
     import asyncio
+    import threading
+    import time
 
     _ensure_generate_deps()
     from visionflow.services.generation.wan_video_service import WanVideoGenerationService
@@ -139,6 +141,29 @@ def _short_generate() -> dict:
 
     os.environ.setdefault("WAN_MAX_VIDEO_DURATION", "2")
     os.environ.setdefault("WAN_GPU_MEMORY_FRACTION", "0.85")
+
+    # Background RAM monitor to print a explicit warning before OOM kill
+    stop_monitor = False
+
+    def _ram_monitor():
+        try:
+            import psutil
+            while not stop_monitor:
+                vm = psutil.virtual_memory()
+                if vm.percent > 88.0:
+                    msg = (
+                        f"\n⚠️  CRITICAL SYSTEM RAM WARNING: {vm.percent:.1f}% used "
+                        f"({vm.used / (1024**3):.2f}GB / {vm.total / (1024**3):.2f}GB). "
+                        "Process is close to Linux OOM-Killer threshold!\n"
+                    )
+                    sys.stdout.write(msg)
+                    sys.stdout.flush()
+                time.sleep(2.0)
+        except Exception:
+            pass
+
+    monitor_thread = threading.Thread(target=_ram_monitor, daemon=True)
+    monitor_thread.start()
 
     request = VideoGenerationRequest(
         prompt="A red cat walks across a wooden table, natural light",
@@ -159,7 +184,10 @@ def _short_generate() -> dict:
         service = WanVideoGenerationService()
         return await service.generate_video(request)
 
-    result = asyncio.run(_go())
+    try:
+        result = asyncio.run(_go())
+    finally:
+        stop_monitor = True
     safe = {
         "status": result.get("status"),
         "error": result.get("error"),
@@ -182,7 +210,27 @@ def _short_generate() -> dict:
     return safe
 
 
+def _setup_oom_notifier() -> None:
+    """Register signal handlers to surface OOM / SIGKILL clues to stdout."""
+    import signal
+
+    def _on_signal(signum, frame):
+        msg = f"\n⚠️  PROCESS RECEIVED SIGNAL {signum} ({signal.Signals(signum).name}) - LIKELY OS OUT-OF-MEMORY (OOM) KILL\n"
+        sys.stdout.write(msg)
+        sys.stdout.flush()
+        sys.stderr.write(msg)
+        sys.stderr.flush()
+        sys.exit(128 + signum)
+
+    for sig in (signal.SIGINT, signal.SIGTERM):
+        try:
+            signal.signal(sig, _on_signal)
+        except Exception:
+            pass
+
+
 def main() -> int:
+    _setup_oom_notifier()
     report: dict = {"hf_token_present": False, "gpu": {}, "pytest": {}, "generate": {}}
     try:
         sys.path.insert(0, str(ROOT / "src"))
