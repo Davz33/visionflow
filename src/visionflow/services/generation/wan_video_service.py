@@ -260,11 +260,21 @@ class WanVideoGenerationService:
                 cache_dir.mkdir(parents=True, exist_ok=True)
             logger.info(f"Using cache directory: {cache_dir}")
             
+            # Choose torch_dtype: Tesla T4 (compute 7.5) does not support native fast bfloat16 well; use float16 if supported
+            if self.device == "cuda":
+                capability = torch.cuda.get_device_capability(0)
+                # Compute capability >= 8.0 (Ampere+) supports bfloat16 well
+                weight_dtype = torch.bfloat16 if capability[0] >= 8 else torch.float16
+            elif self.device == "mps":
+                weight_dtype = torch.float16
+            else:
+                weight_dtype = torch.float32
+
             # Load VAE with explicit cache directory
             vae = AutoencoderKLWan.from_pretrained(
                 self.model_config.model_id, 
                 subfolder="vae", 
-                torch_dtype=torch.float32,
+                torch_dtype=weight_dtype,
                 cache_dir=str(cache_dir),
                 local_files_only=False  # Allow cache fallback
             )
@@ -281,43 +291,34 @@ class WanVideoGenerationService:
             self.pipeline = WanPipeline.from_pretrained(
                 self.model_config.model_id,
                 vae=vae,
-                torch_dtype=torch.bfloat16 if self.device != "cpu" else torch.float32,
+                torch_dtype=weight_dtype,
                 cache_dir=str(cache_dir),
                 local_files_only=False  # Allow cache fallback
             )
             self.pipeline.scheduler = scheduler
-            self.pipeline.to(self.device)
-            
-            # Apply M4-specific optimizations if available
-            if self.m4_optimizer:
-                self.m4_optimizer.configure_pipeline_for_m4(self.pipeline)
-            else:
-                # Fallback: Standard optimizations
-                try:
-                    # Try the newer xformers API first
-                    if hasattr(self.pipeline, 'enable_xformers_memory_efficient_attention'):
-                        self.pipeline.enable_xformers_memory_efficient_attention()
-                        logger.info("✅ xFormers memory efficient attention enabled")
-                    else:
-                        # Fallback: try enabling on individual components
-                        if hasattr(self.pipeline.transformer, 'enable_xformers_memory_efficient_attention'):
-                            self.pipeline.transformer.enable_xformers_memory_efficient_attention()
-                            logger.info("✅ xFormers enabled on transformer")
-                except Exception as e:
-                    logger.warning(f"Could not enable xFormers: {e}")
-            
-            # Enable CPU offload only if GPU memory is limited
+
+            # Offload strategy for VRAM-constrained GPUs (e.g. 15GB T4)
             if self.device == "cuda":
                 total_gpu_memory = torch.cuda.get_device_properties(0).total_memory / (1024**3)
-                # Only enable CPU offload if we have less than 16GB VRAM
-                if total_gpu_memory < 16.0:
+                if total_gpu_memory < 20.0:
                     try:
-                        self.pipeline.enable_model_cpu_offload()
-                        logger.info("✅ CPU offload enabled (limited VRAM)")
+                        # Sequential CPU offload moves submodules one by one to GPU during forward pass
+                        if hasattr(self.pipeline, "enable_sequential_cpu_offload"):
+                            self.pipeline.enable_sequential_cpu_offload()
+                            logger.info("✅ Sequential CPU offload enabled (low VRAM strategy)")
+                        elif hasattr(self.pipeline, "enable_model_cpu_offload"):
+                            self.pipeline.enable_model_cpu_offload()
+                            logger.info("✅ Model CPU offload enabled")
+                        else:
+                            self.pipeline.to(self.device)
                     except Exception as e:
                         logger.warning(f"Could not enable CPU offload: {e}")
+                        self.pipeline.to(self.device)
                 else:
+                    self.pipeline.to(self.device)
                     logger.info(f"🚀 Keeping model on GPU ({total_gpu_memory:.1f}GB VRAM available)")
+            else:
+                self.pipeline.to(self.device)
             
             self.current_model = model_key
             
