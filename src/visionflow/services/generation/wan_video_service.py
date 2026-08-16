@@ -260,11 +260,21 @@ class WanVideoGenerationService:
                 cache_dir.mkdir(parents=True, exist_ok=True)
             logger.info(f"Using cache directory: {cache_dir}")
             
+            # Choose torch_dtype: Tesla T4 (compute 7.5) does not support native fast bfloat16 well; use float16 if supported
+            if self.device == "cuda":
+                capability = torch.cuda.get_device_capability(0)
+                # Compute capability >= 8.0 (Ampere+) supports bfloat16 well
+                weight_dtype = torch.bfloat16 if capability[0] >= 8 else torch.float16
+            elif self.device == "mps":
+                weight_dtype = torch.float16
+            else:
+                weight_dtype = torch.float32
+
             # Load VAE with explicit cache directory
             vae = AutoencoderKLWan.from_pretrained(
                 self.model_config.model_id, 
                 subfolder="vae", 
-                torch_dtype=torch.float32,
+                torch_dtype=weight_dtype,
                 cache_dir=str(cache_dir),
                 local_files_only=False  # Allow cache fallback
             )
@@ -277,47 +287,98 @@ class WanVideoGenerationService:
                 flow_shift=self.model_config.flow_shift
             )
             
-            # Load pipeline with explicit cache directory
-            self.pipeline = WanPipeline.from_pretrained(
-                self.model_config.model_id,
-                vae=vae,
-                torch_dtype=torch.bfloat16 if self.device != "cpu" else torch.float32,
-                cache_dir=str(cache_dir),
-                local_files_only=False  # Allow cache fallback
-            )
-            self.pipeline.scheduler = scheduler
-            self.pipeline.to(self.device)
-            
-            # Apply M4-specific optimizations if available
-            if self.m4_optimizer:
-                self.m4_optimizer.configure_pipeline_for_m4(self.pipeline)
-            else:
-                # Fallback: Standard optimizations
+            # Quantization configuration: Diffusers WanTransformer3DModel uses BitsAndBytesConfig on transformer component
+            transformer = None
+            if self.device == "cuda":
                 try:
-                    # Try the newer xformers API first
-                    if hasattr(self.pipeline, 'enable_xformers_memory_efficient_attention'):
-                        self.pipeline.enable_xformers_memory_efficient_attention()
-                        logger.info("✅ xFormers memory efficient attention enabled")
-                    else:
-                        # Fallback: try enabling on individual components
-                        if hasattr(self.pipeline.transformer, 'enable_xformers_memory_efficient_attention'):
-                            self.pipeline.transformer.enable_xformers_memory_efficient_attention()
-                            logger.info("✅ xFormers enabled on transformer")
-                except Exception as e:
-                    logger.warning(f"Could not enable xFormers: {e}")
-            
-            # Enable CPU offload only if GPU memory is limited
+                    from diffusers import BitsAndBytesConfig, WanTransformer3DModel
+                    quant_config = BitsAndBytesConfig(load_in_8bit=True)
+                    transformer = WanTransformer3DModel.from_pretrained(
+                        self.model_config.model_id,
+                        subfolder="transformer",
+                        quantization_config=quant_config,
+                        torch_dtype=weight_dtype,
+                        cache_dir=str(cache_dir),
+                        local_files_only=False,
+                    )
+                    logger.info("⚡ 8-bit quantized WanTransformer3DModel loaded successfully")
+                except Exception as exc:
+                    logger.info(f"Sub-component 8-bit load not applicable ({exc}); continuing with float16 transformer")
+
+            # Force garbage collection before pipeline assembly
+            gc.collect()
+            if self.device == "cuda":
+                torch.cuda.empty_cache()
+
+            pipeline_kwargs = {
+                "vae": vae,
+                "torch_dtype": weight_dtype,
+                "cache_dir": str(cache_dir),
+                "low_cpu_mem_usage": True,
+                "local_files_only": False,
+            }
+            if transformer is not None:
+                pipeline_kwargs["transformer"] = transformer
+
+            try:
+                self.pipeline = WanPipeline.from_pretrained(
+                    self.model_config.model_id,
+                    **pipeline_kwargs
+                )
+            except (ValueError, TypeError) as exc:
+                logger.warning(f"Initial pipeline load with kwargs failed ({exc}), retrying standard float16 load")
+                gc.collect()
+                self.pipeline = WanPipeline.from_pretrained(
+                    self.model_config.model_id,
+                    vae=vae,
+                    torch_dtype=weight_dtype,
+                    cache_dir=str(cache_dir),
+                    local_files_only=False
+                )
+            self.pipeline.scheduler = scheduler
+
+            # Offload and memory placement strategy adapted to available VRAM
             if self.device == "cuda":
                 total_gpu_memory = torch.cuda.get_device_properties(0).total_memory / (1024**3)
-                # Only enable CPU offload if we have less than 16GB VRAM
-                if total_gpu_memory < 16.0:
+                free_gpu_memory = torch.cuda.mem_get_info()[0] / (1024**3) if torch.cuda.is_available() else total_gpu_memory
+                logger.info(f"📊 CUDA Memory: total={total_gpu_memory:.1f}GB, free={free_gpu_memory:.1f}GB")
+                
+                # Enable VAE tiling & slicing to keep VRAM low during decode
+                if hasattr(self.pipeline, "enable_vae_slicing"):
+                    self.pipeline.enable_vae_slicing()
+                    logger.info("⚡ VAE slicing enabled")
+                if hasattr(self.pipeline, "enable_vae_tiling"):
+                    self.pipeline.enable_vae_tiling()
+                    logger.info("⚡ VAE tiling enabled")
+
+                # Adaptive tiers based on available free VRAM and total VRAM
+                if free_gpu_memory < 16.0 or total_gpu_memory < 20.0:
                     try:
-                        self.pipeline.enable_model_cpu_offload()
-                        logger.info("✅ CPU offload enabled (limited VRAM)")
+                        if free_gpu_memory < 8.0:
+                            # Severe constraint: sequential CPU offload (submodule by submodule during forward pass)
+                            if hasattr(self.pipeline, "enable_sequential_cpu_offload"):
+                                self.pipeline.enable_sequential_cpu_offload()
+                                logger.info("⚡ Adaptive VRAM strategy: Sequential CPU offload enabled (<8GB free VRAM)")
+                            elif hasattr(self.pipeline, "enable_model_cpu_offload"):
+                                self.pipeline.enable_model_cpu_offload()
+                                logger.info("⚡ Adaptive VRAM strategy: Model CPU offload fallback enabled")
+                            else:
+                                self.pipeline.to(self.device)
+                        else:
+                            # Moderate constraint: whole-model CPU offload (offloads entire components when idle)
+                            if hasattr(self.pipeline, "enable_model_cpu_offload"):
+                                self.pipeline.enable_model_cpu_offload()
+                                logger.info("⚡ Adaptive VRAM strategy: Model CPU offload enabled (<16GB free VRAM)")
+                            else:
+                                self.pipeline.to(self.device)
                     except Exception as e:
                         logger.warning(f"Could not enable CPU offload: {e}")
+                        self.pipeline.to(self.device)
                 else:
-                    logger.info(f"🚀 Keeping model on GPU ({total_gpu_memory:.1f}GB VRAM available)")
+                    self.pipeline.to(self.device)
+                    logger.info(f"🚀 High VRAM detected ({free_gpu_memory:.1f}GB free): Keeping full model on GPU")
+            else:
+                self.pipeline.to(self.device)
             
             self.current_model = model_key
             

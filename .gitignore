@@ -84,6 +84,7 @@ docker-compose.override.yml
 # Jupyter
 .ipynb_checkpoints/
 *.ipynb
+!notebooks/wan22_colab_e2e.ipynb
 
 # Database
 **/*.db

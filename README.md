@@ -525,3 +525,5 @@ python -m visionflow.eval.cli plan --task ti2v-5B --size 1280*704 --prompt "a ca
 
 Eval axes in `config/wan_eval_suite.yaml`: TI2V / T2V / I2V / S2V / Animate / Animate-2, 5B vs A14B, prompt-extend on/off, 480P/720P (and TI2V 1280x704 @ 24fps), UniPC vs DPM++ vs few-step, plus official Animate-2 distilled 4-step weights. Result JSON records `model_revision`, `upstream_git_sha`, `hf_revision`, and `seed`.
 
+See [`docs/COLAB_WAN22_BENCHMARK_REPORT.md`](docs/COLAB_WAN22_BENCHMARK_REPORT.md) for empirical hardware limits on free-tier runtimes (e.g., Colab Free 12.7 GB System RAM vs. High-RAM requirements for 5B models).
+

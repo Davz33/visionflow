@@ -118,6 +118,7 @@ no_implicit_optional = true
 
 [tool.pytest.ini_options]
 minversion = "7.0"
+pythonpath = ["src"]
 python_files = ["test_*.py", "*_test.py"]
 python_classes = ["Test*"]
 python_functions = ["test_*"]
