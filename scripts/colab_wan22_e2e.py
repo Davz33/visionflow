@@ -19,6 +19,13 @@ from typing import Optional
 ROOT = Path(__file__).resolve().parents[1]
 REPORT = Path("/tmp/wan22_colab_e2e_report.json")
 
+# Import chain for WanVideoGenerationService on a slim Colab pip set.
+GENERATE_PIP = (
+    "structlog>=23.2.0",
+    "prometheus-client>=0.19.0",
+    "pydantic-settings>=2.0.0",
+)
+
 
 def _token_from_colab() -> Optional[str]:
     try:
@@ -94,9 +101,39 @@ def _run_pytest() -> dict:
     }
 
 
+def _ensure_generate_deps() -> None:
+    """Install Hub-adjacent packages the generate service imports at load."""
+    probes = (
+        ("structlog", GENERATE_PIP[0]),
+        ("prometheus_client", GENERATE_PIP[1]),
+        ("pydantic_settings", GENERATE_PIP[2]),
+    )
+    missing = []
+    for module_name, spec in probes:
+        try:
+            __import__(module_name)
+        except ImportError:
+            missing.append(spec)
+    if not missing:
+        return
+    print("installing generate deps", missing)
+    completed = subprocess.run(
+        [sys.executable, "-m", "pip", "install", "-q", *missing],
+        check=False,
+        capture_output=True,
+        text=True,
+    )
+    if completed.returncode != 0:
+        raise RuntimeError(
+            "pip failed for generate deps: "
+            + (completed.stderr or completed.stdout)[-800:]
+        )
+
+
 def _short_generate() -> dict:
     import asyncio
 
+    _ensure_generate_deps()
     from visionflow.services.generation.wan_video_service import WanVideoGenerationService
     from visionflow.shared.models import VideoGenerationRequest, WanTask
 
