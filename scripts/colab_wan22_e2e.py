@@ -193,6 +193,8 @@ def main() -> int:
         report["pytest"] = _run_pytest()
         print("pytest_returncode", report["pytest"]["returncode"])
         print(report["pytest"]["stdout_tail"])
+        # Flush report to disk early so partial results are readable if interrupted
+        REPORT.write_text(json.dumps(report, indent=2, default=str) + "\n", encoding="utf-8")
         if report["gpu"].get("cuda_available"):
             report["generate"] = _short_generate()
         else:
